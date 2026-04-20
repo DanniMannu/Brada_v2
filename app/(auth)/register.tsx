@@ -1,16 +1,11 @@
 //import { supabase } from "@/lib/supabase";
 import Button from "@/components/ui/Button";
+import { InfoBox } from "@/components/ui/InfoBox";
 import Links from "@/components/ui/Links";
+import { registerInfoMessage } from "@/constants/messages";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -33,23 +28,9 @@ export default function RegisterScreen() {
     transform: [{ translateX: logoTranslateX.value }],
   }));
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [role, setRole] = useState("client");
+  const [role, setRole] = useState("Cliente");
 
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirm) {
-      Alert.alert("Erro", "Preenche todos os campos");
-      return;
-    }
-
-    if (password !== confirm) {
-      Alert.alert("Erro", "Passwords não coincidem");
-      return;
-    }
-
     /*
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -74,8 +55,14 @@ export default function RegisterScreen() {
       role,
     }); DMC TESTE*/
 
-    Alert.alert("Sucesso", "Conta criada");
-    router.replace("./login");
+    //Alert.alert("Sucesso", "Conta criada");
+    router.replace(
+      role === "Cliente"
+        ? "./(client)"
+        : role === "Restaurante"
+          ? "/(auth)/register-restaurant"
+          : "./(courier)",
+    );
   };
 
   return (
@@ -84,37 +71,7 @@ export default function RegisterScreen() {
         {/* Logo animado */}
         <Animated.Text style={[styles.logo, logoStyle]}>Brada.</Animated.Text>
 
-        <Text style={styles.title}>Criar conta</Text>
-
-        <TextInput
-          placeholder="Nome completo"
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-        />
-
-        <TextInput
-          placeholder="Email"
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        <TextInput
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <TextInput
-          placeholder="Confirmar password"
-          secureTextEntry
-          style={styles.input}
-          value={confirm}
-          onChangeText={setConfirm}
-        />
+        <InfoBox message={registerInfoMessage} type="info" />
 
         {/* ROLES */}
         <View style={styles.roles}>
