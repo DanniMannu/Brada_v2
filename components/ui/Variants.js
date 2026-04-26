@@ -16,6 +16,11 @@ export const variants = {
     borderColor: "#782726",
     textColor: "#782726",
   },
+  danger: {
+    backgroundColor: "transparent",
+    borderColor: "#f2130f",
+    textColor: "#0c0606",
+  },
 };
 /**Exemplo de como utilizar: 782726
  * <Button title="Login" variant="primary" />
