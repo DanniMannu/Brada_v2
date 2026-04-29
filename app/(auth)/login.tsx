@@ -25,7 +25,7 @@ export default function LoginScreen() {
   useEffect(() => {
     logoTranslateX.value = withTiming(0, { duration: 900 });
     logoOpacity.value = withTiming(1, { duration: 900 });
-  }, []);
+  }, [logoTranslateX, logoOpacity]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,

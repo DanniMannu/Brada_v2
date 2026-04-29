@@ -3,6 +3,10 @@ export const variants = {
     backgroundColor: "#782726",
     textColor: "#FFFFFF",
   },
+  secondary: {
+    backgroundColor: "#8d4847",
+    textColor: "#FFFFFF",
+  },
   accept: {
     backgroundColor: "#9A4A49",
     textColor: "#FFFFFF",
@@ -17,9 +21,13 @@ export const variants = {
     textColor: "#782726",
   },
   danger: {
-    backgroundColor: "transparent",
-    borderColor: "#f2130f",
+    backgroundColor: "#f2130f",
+    borderColor: "#0c0606",
     textColor: "#0c0606",
+  },
+  selectItems: {
+    backgroundColor: "#b47b7a",
+    textColor: "#FFFFFF",
   },
 };
 /**Exemplo de como utilizar: 782726
