@@ -1,5 +1,6 @@
+import type { ImageAsset } from "@/components/others/ImageAsset";
 import type { Menu } from "@/components/others/Menu";
-import type { Product, ProductImage } from "@/components/others/Product";
+import type { Product } from "@/components/others/Product";
 import Button from "@/components/ui/Button";
 import ButtonList from "@/components/ui/ButtonList";
 import { InfoBox } from "@/components/ui/InfoBox";
@@ -11,6 +12,7 @@ import {
 import { Picker } from "@react-native-picker/picker";
 import type { DocumentPickerAsset } from "expo-document-picker";
 import * as DocumentPicker from "expo-document-picker";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -36,6 +38,7 @@ export default function RegisterRestaurant() {
 
   /* ================= STEP 1 ================= */
   const [name, setName] = useState("");
+  const [nuit, setNuit] = useState("");
   const [type, setType] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -70,7 +73,8 @@ export default function RegisterRestaurant() {
   const [productDescription, setProductDescription] = useState("");
   const [productCategory, setProductCategory] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [productImages, setProductImages] = useState<ProductImage[]>([]);
+
+  const [productImages, setProductImages] = useState<ImageAsset[]>([]);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // menu
@@ -79,6 +83,7 @@ export default function RegisterRestaurant() {
   const [menuPrice, setMenuPrice] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [editingMenuId, setEditingMenuId] = useState<string | null>(null);
+  const [menuImages, setMenuImages] = useState<ImageAsset[]>([]);
 
   const toggleProductInMenu = (id: string) => {
     setSelectedProducts((prev) =>
@@ -88,6 +93,30 @@ export default function RegisterRestaurant() {
 
   const isProductUsedInMenus = (productId: string) => {
     return menus.some((menu) => menu.productIds.includes(productId));
+  };
+
+  const pickMenuImage = async () => {
+    if (menuImages.length >= 2) {
+      Alert.alert("Limite de imagens", "O menu pode ter no máximo 2 imagens.");
+      return;
+    }
+
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["image/*"],
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+
+      setMenuImages((prev) => [
+        ...prev,
+        {
+          uri: asset.uri,
+          name: asset.name ?? `menu-image-${Date.now()}.jpg`,
+          type: asset.mimeType,
+        },
+      ]);
+    }
   };
 
   const removeMenu = (id: string) =>
@@ -113,6 +142,7 @@ export default function RegisterRestaurant() {
                 description: menuDescription,
                 price: menuPrice,
                 productIds: selectedProducts,
+                images: menuImages,
               }
             : m,
         ),
@@ -127,6 +157,7 @@ export default function RegisterRestaurant() {
           description: menuDescription,
           price: menuPrice,
           productIds: selectedProducts,
+          images: menuImages,
         },
       ]);
     }
@@ -262,6 +293,8 @@ export default function RegisterRestaurant() {
   };
 
   /* ================= STEP 6 ================= */
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const [operatingLicense, setOperatingLicense] =
     useState<DocumentPickerAsset | null>(null);
@@ -286,19 +319,108 @@ export default function RegisterRestaurant() {
   const next = () => step < 6 && setStep((s) => (s + 1) as Step);
   const back = () => step > 1 && setStep((s) => (s - 1) as Step);
 
-  const submit = () => {
-    if (!operatingLicense || !sanitaryLicense || !agreed) {
+  const buildRegistrationPayload = () => {
+    return {
+      establishment: {
+        name,
+        nuit,
+        type,
+        email,
+        phone,
+        location,
+        stores,
+      },
+
+      delivery: {
+        deliveryType,
+        coverage,
+        fee,
+        time,
+      },
+
+      payment: {
+        method: paymentMethod,
+        mobileNumber,
+        bankName,
+        bankNib,
+      },
+
+      agreement: {
+        ownerName,
+        ownerEmail,
+        agreed,
+      },
+
+      menu: {
+        products,
+        menus,
+      },
+
+      licenses: {
+        operatingLicense: operatingLicense?.name,
+        sanitaryLicense: sanitaryLicense?.name,
+      },
+
+      createdAt: new Date().toISOString(),
+    };
+  };
+
+  const submit = async () => {
+    if (isSubmitting) return;
+
+    if (!agreed) {
       Alert.alert(
-        "Campos obrigatórios não preenchidos.",
-        "Por favor, preencha todos os campos.",
+        "Campos obrigatórios",
+        "É obrigatório aceitar o acordo de parceria.",
       );
       return;
     }
 
-    Alert.alert(
-      "Candidatura submetida",
-      "A candidatura foi enviada para análise.",
-    );
+    try {
+      setIsSubmitting(true);
+
+      const payload = buildRegistrationPayload();
+
+      console.log("📤 PAYLOAD ENVIADO:", payload);
+
+      const response = await fetch(
+        "http://192.168.0.115:3001/send-registration",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("❌ Erro backend:", text);
+        throw new Error("Erro no backend");
+      }
+
+      Alert.alert(
+        "Candidatura submetida",
+        "A nossa equipa irá rever a candidatura e entrar em contacto através do email ou telefone disponibilizado.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace("/login");
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      console.error("❌ Erro ao submeter:", error);
+      Alert.alert(
+        "Erro ao enviar",
+        "Não foi possível enviar o registo. Tente novamente.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -319,6 +441,14 @@ export default function RegisterRestaurant() {
                 placeholder="Nome do estabelecimento"
                 value={name}
                 onChangeText={setName}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Nuit do estabelecimento"
+                keyboardType="phone-pad"
+                value={nuit}
+                onChangeText={setNuit}
               />
 
               <View style={styles.picker}>
@@ -504,6 +634,7 @@ export default function RegisterRestaurant() {
               </Pressable>
             </>
           )}
+
           {/* ================= STEP 5 ================= */}
           {step === 5 && (
             <>
@@ -512,16 +643,19 @@ export default function RegisterRestaurant() {
                 message="Adicione produtos e crie menus a partir dos produtos existentes."
                 type="info"
               />
-              {/* PRODUTOS */}
+
+              {/* ================= PRODUTOS ================= */}
               <Text style={{ fontWeight: "700", marginBottom: 8 }}>
                 Produtos
               </Text>
+
               <TextInput
                 style={styles.input}
                 placeholder="Nome do produto"
                 value={productName}
                 onChangeText={setProductName}
               />
+
               <TextInput
                 style={[styles.input, { height: 70 }]}
                 placeholder="Descrição"
@@ -529,12 +663,14 @@ export default function RegisterRestaurant() {
                 value={productDescription}
                 onChangeText={setProductDescription}
               />
+
               <TextInput
                 style={styles.input}
                 placeholder="Categoria"
                 value={productCategory}
                 onChangeText={setProductCategory}
               />
+
               <TextInput
                 style={styles.input}
                 placeholder="Preço"
@@ -542,15 +678,18 @@ export default function RegisterRestaurant() {
                 value={productPrice}
                 onChangeText={setProductPrice}
               />
+
               <Text style={{ fontWeight: "600", marginTop: 8 }}>
                 Imagens do produto (mín. 1 · máx. 2)
               </Text>
+
               <Button
                 title="Adicionar imagem"
                 variant="outline"
                 onPress={pickProductImage}
-                style={{ marginBottom: 1 }}
+                style={{ marginTop: 10 }}
               />
+
               {productImages.map((img, index) => (
                 <View
                   key={index}
@@ -562,11 +701,7 @@ export default function RegisterRestaurant() {
                   }}
                 >
                   <Text
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      color: "#444",
-                    }}
+                    style={{ flex: 1, fontSize: 13, color: "#444" }}
                     numberOfLines={1}
                   >
                     {img.name}
@@ -576,23 +711,23 @@ export default function RegisterRestaurant() {
                     title="Remover"
                     variant="danger"
                     onPress={() => removeProductImage(index)}
-                    style={{ marginTop: 0 }}
+                    style={{ marginTop: 10 }}
                   />
                 </View>
               ))}
+
               <Button
                 title={
                   editingProductId ? "Guardar alterações" : "Adicionar produto"
                 }
                 variant="secondary"
                 onPress={saveProduct}
-                style={{ marginTop: 1 }}
+                style={{ marginTop: 10 }}
               />
 
               {/* LISTA DE PRODUTOS */}
               {products.map((p) => (
                 <View key={p.id} style={styles.productRow}>
-                  {/* INFO DO PRODUTO */}
                   <View style={styles.productInfo}>
                     <Text style={styles.productName}>
                       {p.name} · {p.price} MT
@@ -602,25 +737,25 @@ export default function RegisterRestaurant() {
                     </Text>
                   </View>
 
-                  {/* AÇÕES */}
                   <View style={styles.productActions}>
                     <ButtonList
                       title="Editar"
                       variant="outline"
                       onPress={() => editProduct(p)}
-                      style={{ marginTop: 1 }}
+                      style={{ marginTop: 10 }}
                     />
                     <ButtonList
                       title="Remover"
                       variant="danger"
                       onPress={() => removeProduct(p.id)}
-                      style={{ marginTop: 0 }}
                       disabled={isProductUsedInMenus(p.id)}
+                      style={{ marginTop: 10 }}
                     />
                   </View>
                 </View>
               ))}
-              {/* MENUS */}
+
+              {/* ================= MENUS ================= */}
               {products.length >= 2 && (
                 <>
                   <View style={{ marginTop: 20 }}>
@@ -628,7 +763,7 @@ export default function RegisterRestaurant() {
                       title={creatingMenu ? "Cancelar menu" : "Criar menu"}
                       variant="primary"
                       onPress={() => setCreatingMenu((prev) => !prev)}
-                      style={{ marginBottom: 10 }}
+                      style={{ marginTop: 10 }}
                     />
                   </View>
 
@@ -640,6 +775,7 @@ export default function RegisterRestaurant() {
                         value={menuName}
                         onChangeText={setMenuName}
                       />
+
                       <TextInput
                         style={[styles.input, { height: 70 }]}
                         placeholder="Descrição do menu"
@@ -647,6 +783,7 @@ export default function RegisterRestaurant() {
                         value={menuDescription}
                         onChangeText={setMenuDescription}
                       />
+
                       <TextInput
                         style={styles.input}
                         placeholder="Preço do menu"
@@ -654,6 +791,48 @@ export default function RegisterRestaurant() {
                         value={menuPrice}
                         onChangeText={setMenuPrice}
                       />
+
+                      {/* ✅ IMAGENS DO MENU (O QUE FALTAVA) */}
+                      <Text style={{ fontWeight: "600", marginTop: 8 }}>
+                        Imagens do menu (mín. 1 · máx. 2)
+                      </Text>
+
+                      <Button
+                        title="Adicionar imagem do menu"
+                        variant="outline"
+                        onPress={pickMenuImage}
+                        style={{ marginTop: 10 }}
+                      />
+
+                      {menuImages.map((img, index) => (
+                        <View
+                          key={index}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            paddingVertical: 4,
+                          }}
+                        >
+                          <Text
+                            style={{ flex: 1, fontSize: 13, color: "#444" }}
+                            numberOfLines={1}
+                          >
+                            {img.name}
+                          </Text>
+
+                          <ButtonList
+                            title="Remover"
+                            variant="danger"
+                            onPress={() =>
+                              setMenuImages((prev) =>
+                                prev.filter((_, i) => i !== index),
+                              )
+                            }
+                            style={{ marginTop: 10 }}
+                          />
+                        </View>
+                      ))}
 
                       <Text style={{ fontWeight: "600", marginBottom: 6 }}>
                         Produtos do menu (mín. 2):
@@ -696,6 +875,7 @@ export default function RegisterRestaurant() {
                             setMenuDescription("");
                             setMenuPrice("");
                             setSelectedProducts([]);
+                            setMenuImages([]);
                           }}
                           style={{ marginTop: 10 }}
                         />
@@ -738,13 +918,13 @@ export default function RegisterRestaurant() {
                               title="Editar"
                               variant="outline"
                               onPress={() => editMenu(m)}
-                              style={{ paddingTop: 10 }}
+                              style={{ marginTop: 10 }}
                             />
                             <Button
                               title="Remover"
                               variant="danger"
                               onPress={() => removeMenu(m.id)}
-                              style={{ paddingTop: 10 }}
+                              style={{ marginTop: 10 }}
                             />
                           </View>
                         </>
@@ -755,6 +935,7 @@ export default function RegisterRestaurant() {
               )}
             </>
           )}
+
           {/* ================= STEP 6 ================= */}
           {step === 6 && (
             <>
@@ -806,8 +987,9 @@ export default function RegisterRestaurant() {
               />
             ) : (
               <Button
-                title="Submeter candidatura"
+                title={isSubmitting ? "A submeter..." : "Submeter candidatura"}
                 onPress={submit}
+                disabled={isSubmitting}
                 style={{ marginTop: 10 }}
               />
             )}

@@ -1,7 +1,4 @@
-export type ProductImage = {
-  uri: string;
-  name?: string;
-};
+import type { ImageAsset } from "./ImageAsset";
 
 export type Product = {
   id: string;
@@ -9,5 +6,5 @@ export type Product = {
   description: string;
   category: string;
   price: string;
-  images: ProductImage[]; //1 obrigatório, máx. 2
+  images: ImageAsset[];
 };

@@ -1,12 +1,19 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 import { variants } from "./Variants";
 
-export default function Button({ title, onPress, variant = "primary", style }) {
+export default function Button({
+  title,
+  onPress,
+  variant = "primary",
+  style,
+  disabled = false,
+}) {
   const v = variants[variant];
 
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.button,
         {
