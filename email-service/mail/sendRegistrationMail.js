@@ -3,13 +3,15 @@ import { registrationTemplate } from "../utils/htmlTemplates.js";
 
 /**
  * Envio de email de candidatura.
+ * Recebe SEMPRE dados da BD (fonte da verdade)
  */
-export const sendRegistrationMail = async ({ data }) => {
+export const sendRegistrationMail = async ({ registration, licenses }) => {
   try {
-    //  validação mínima defensiva
-    const payload = data && typeof data === "object" ? data : {};
+    // ✅ validação defensiva real
+    if (!registration || typeof registration !== "object") {
+      throw new Error("Registration inválido para envio de email");
+    }
 
-    // criar transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -18,25 +20,24 @@ export const sendRegistrationMail = async ({ data }) => {
       },
     });
 
-    // construir mensagem
     const mailOptions = {
       from: `"Brada Delivery" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_TO,
       subject: "Nova candidatura de estabelecimento",
-      html: registrationTemplate(payload),
+      html: registrationTemplate({
+        registration,
+        licenses,
+      }),
     };
 
-    // enviar
     await transporter.sendMail(mailOptions);
 
-    console.log("✅ Email de candidatura enviado");
+    console.log(
+      "✅ Email enviado com sucesso para candidatura:",
+      registration.id,
+    );
   } catch (error) {
-    /**
-     *
-     * Nunca lançar o erro.
-     * Email é secundário.
-     * A candidatura NÃO pode ser afetada.
-     */
+    // ❗ Email é secundário — nunca quebra o fluxo
     console.error("❌ Erro ao enviar email:", error);
   }
 };

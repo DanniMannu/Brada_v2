@@ -9,6 +9,7 @@ import {
   paymentInfoMessage,
   termosInfoMessage,
 } from "@/constants/messages";
+import { uploadLicense } from "@/lib/uploadLicense";
 import { Picker } from "@react-native-picker/picker";
 import type { DocumentPickerAsset } from "expo-document-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -31,7 +32,7 @@ type Step = 1 | 2 | 3 | 4 | 5 | 6;
 type PaymentMethod = "mpesa" | "emola" | "mkesh" | "bank" | "";
 type DeliveryType = "proprio" | "brada" | "ambos" | "";
 
-/* ================= STEP 5 MODELS ================= */
+/* ================= STEPS================= */
 
 export default function RegisterRestaurant() {
   const [step, setStep] = useState<Step>(1);
@@ -366,22 +367,25 @@ export default function RegisterRestaurant() {
   };
 
   const submit = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      return;
+    }
 
-    if (!agreed) {
+    if (!agreed || !operatingLicense || !sanitaryLicense) {
       Alert.alert(
         "Campos obrigatórios",
-        "É obrigatório aceitar o acordo de parceria.",
+        "É obrigatório aceitar o acordo e carregar as licenças.",
       );
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
-      setIsSubmitting(true);
-
+      // =====================
+      // 1️⃣ SUBMISSÃO DA CANDIDATURA (JSON)
+      // =====================
       const payload = buildRegistrationPayload();
-
-      console.log("📤 PAYLOAD ENVIADO:", payload);
 
       const response = await fetch(
         "http://192.168.0.115:3001/send-registration",
@@ -395,14 +399,16 @@ export default function RegisterRestaurant() {
       );
 
       if (!response.ok) {
-        const text = await response.text();
-        console.error("❌ Erro backend:", text);
-        throw new Error("Erro no backend");
+        throw new Error("Erro ao guardar candidatura");
       }
 
+      const result = await response.json();
+      const registrationId = result.registrationId;
+
+      // ✅ UX correta: candidatura criada
       Alert.alert(
         "Candidatura submetida",
-        "A nossa equipa irá rever a candidatura e entrar em contacto através do email ou telefone disponibilizado.",
+        "A nossa equipa irá rever a candidatura e entrar em contacto.",
         [
           {
             text: "OK",
@@ -412,12 +418,54 @@ export default function RegisterRestaurant() {
           },
         ],
       );
+
+      // =====================
+      // 2️⃣ UPLOAD DAS LICENÇAS (BACKGROUND)
+      // NÃO bloqueia o submit
+      // =====================
+      uploadLicense(registrationId, operatingLicense, "operating")
+        .then((operating) => {
+          return fetch("http://192.168.0.115:3001/save-license-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              registrationId: registrationId,
+              type: "operating",
+              fileName: operating.fileName,
+              fileUrl: operating.fileUrl,
+            }),
+          });
+        })
+        .catch((error) => {
+          console.warn(
+            "⚠️ Falha no upload da licença de funcionamento:",
+            error,
+          );
+        });
+
+      uploadLicense(registrationId, sanitaryLicense, "sanitary")
+        .then((sanitary) => {
+          return fetch("http://192.168.0.115:3001/save-license-url", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              registrationId: registrationId,
+              type: "sanitary",
+              fileName: sanitary.fileName,
+              fileUrl: sanitary.fileUrl,
+            }),
+          });
+        })
+        .catch((error) => {
+          console.warn("⚠️ Falha no upload da licença sanitária:", error);
+        });
     } catch (error) {
-      console.error("❌ Erro ao submeter:", error);
-      Alert.alert(
-        "Erro ao enviar",
-        "Não foi possível enviar o registo. Tente novamente.",
-      );
+      console.error("❌ Erro no submit:", error);
+      Alert.alert("Erro ao enviar", "Não foi possível concluir o envio.");
     } finally {
       setIsSubmitting(false);
     }
@@ -510,20 +558,20 @@ export default function RegisterRestaurant() {
                 <>
                   <TextInput
                     style={styles.input}
-                    placeholder="Zona de cobertura"
+                    placeholder="Zona de cobertura (Ex: bairros,raio kms)"
                     value={coverage}
                     onChangeText={setCoverage}
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="Taxa de entrega"
+                    placeholder="Valor da taxa de entrega/Km"
                     keyboardType="numeric"
                     value={fee}
                     onChangeText={setFee}
                   />
                   <TextInput
                     style={styles.input}
-                    placeholder="Tempo estimado de entrega"
+                    placeholder="Tempo de entrega (Ex: 30-45 min)"
                     value={time}
                     onChangeText={setTime}
                   />
@@ -758,7 +806,7 @@ export default function RegisterRestaurant() {
               {/* ================= MENUS ================= */}
               {products.length >= 2 && (
                 <>
-                  <View style={{ marginTop: 20 }}>
+                  <View style={{ marginBottom: 10 }}>
                     <Button
                       title={creatingMenu ? "Cancelar menu" : "Criar menu"}
                       variant="primary"
@@ -949,7 +997,7 @@ export default function RegisterRestaurant() {
               <Button
                 title={
                   sanitaryLicense
-                    ? "Licença sanitária carregada"
+                    ? "Licença carregada"
                     : "Carregar licença sanitária"
                 }
                 variant="outline"
@@ -960,7 +1008,7 @@ export default function RegisterRestaurant() {
               <Button
                 title={
                   operatingLicense
-                    ? "Licença de funcionamento carregada"
+                    ? "Licença carregada"
                     : "Carregar licença de funcionamento"
                 }
                 variant="outline"
@@ -1017,6 +1065,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,
+    marginTop: 10,
     backgroundColor: "#FAFAFA",
   },
 

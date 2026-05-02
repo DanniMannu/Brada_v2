@@ -1,35 +1,31 @@
 /**
- * Template de email baseado EXCLUSIVAMENTE
- * na fonte da verdade: a Base de Dados
- *
- * Recebe: row da tabela `registrations`
+ * Template de email – BD first
+ * Nunca quebra se dados vierem incompletos
  */
-const safe = (v, fallback = "—") =>
-  v !== undefined && v !== null && v !== "" ? v : fallback;
+export const registrationTemplate = (input = {}) => {
+  const registration = input.registration || {};
+  const licenses = Array.isArray(input.licenses) ? input.licenses : [];
 
-export const registrationTemplate = (registration) => {
-  if (!registration || typeof registration !== "object") {
-    return `
-      <h2>Nova candidatura – Brada</h2>
-      <p>⚠️ Erro ao carregar dados da candidatura.</p>
-    `;
-  }
+  const safe = (v) => (v ? v : "—");
+
+  const operating = licenses.find((l) => l.type === "operating");
+  const sanitary = licenses.find((l) => l.type === "sanitary");
 
   return `
-    <div style="font-family: Arial, sans-serif; line-height:1.5; color:#333">
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333">
 
-      <h2>Nova Candidatura – Brada</h2>
+      <h2>📩 Nova Candidatura – Brada Delivery</h2>
 
       <hr/>
 
       <h3>🏪 Estabelecimento</h3>
       <p><b>Nome:</b> ${safe(registration.name)}</p>
       <p><b>NUIT:</b> ${safe(registration.nuit)}</p>
-      <p><b>Tipo:</b> ${safe(registration.type)}</p>
       <p><b>Email:</b> ${safe(registration.email)}</p>
       <p><b>Telefone:</b> ${safe(registration.phone)}</p>
       <p><b>Localização:</b> ${safe(registration.location)}</p>
       <p><b>Nº de lojas:</b> ${safe(registration.stores)}</p>
+
 
       <hr/>
 
@@ -56,9 +52,36 @@ export const registrationTemplate = (registration) => {
 
       <hr/>
 
-      <p style="font-size:12px; color:#666">
+
+      <h3>📎 Licenças</h3>
+      <ul>
+        <li>
+          <b>Licença de Funcionamento:</b><br/>
+          ${
+            operating
+              ? `<a href="${operating.file_url}" target="_blank">Ver documento</a>`
+              : "— não enviada —"
+          }
+        </li>
+        <li>
+          <b>Licença Sanitária:</b><br/>
+          ${
+            sanitary
+              ? `<a href="${sanitary.file_url}" target="_blank">Ver documento</a>`
+              : "— não enviada —"
+          }
+        </li>
+      </ul>
+
+      <hr/>
+
+      <p style="font-size:12px;color:#666">
         Estado: ${safe(registration.status)}<br/>
-        Submetido em ${new Date(registration.created_at).toLocaleString("pt-PT")}
+        Submetido em ${
+          registration.created_at
+            ? new Date(registration.created_at).toLocaleString("pt-PT")
+            : "—"
+        }
       </p>
 
     </div>
