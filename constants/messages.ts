@@ -1,5 +1,4 @@
-export const registerInfoMessage = `
-Bem-vindo! 👋
+export const registerInfoMessage = `Bem-vindo! 👋
 
 Escolha o tipo de conta que pretende criar.
 Selecione uma das opções abaixo para continuar o seu registo.

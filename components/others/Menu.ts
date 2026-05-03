@@ -1,10 +1,10 @@
 import type { ImageAsset } from "./ImageAsset";
 
-export type Product = {
+export type Menu = {
   id: string;
   name: string;
   description: string;
-  category: string;
   price: string;
+  productIds: string[];
   images: ImageAsset[];
 };

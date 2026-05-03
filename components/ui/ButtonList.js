@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text } from "react-native";
 import { variants } from "./Variants";
 
-export default function Button({
+export default function ButtonList({
   title,
   onPress,
   variant = "primary",
@@ -13,7 +13,6 @@ export default function Button({
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
       style={({ pressed }) => [
         styles.button,
         {
@@ -31,8 +30,8 @@ export default function Button({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -40,6 +39,6 @@ const styles = StyleSheet.create({
   },
   text: {
     fontWeight: "600",
-    fontSize: 15,
+    fontSize: 16,
   },
 });
