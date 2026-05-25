@@ -367,8 +367,6 @@ export default function RegisterRestaurant() {
   };
 
   const submit = async () => {
-    console.log("CLICK SUBMIT");
-
     if (isSubmitting) {
       return;
     }
@@ -390,7 +388,7 @@ export default function RegisterRestaurant() {
       const payload = buildRegistrationPayload();
 
       const response = await fetch(
-        "http://172.23.116.59:3001/send-registration",
+        "http://192.168.0.115:3001/sendRegistrationMail",
         {
           method: "POST",
           headers: {
@@ -400,20 +398,12 @@ export default function RegisterRestaurant() {
         },
       );
 
-      const result = await response.json();
-
-      console.log("STATUS:", response.status);
-      console.log("RESPOSTA:", result);
-      console.log("response : ", response.ok);
-
       if (!response.ok) {
-        console.log("❌ ERRO No response:", result);
-        throw new Error(result);
+        throw new Error("Erro ao guardar candidatura");
       }
 
+      const result = await response.json();
       const registrationId = result.registrationId;
-
-      console.log("registrationId: ", registrationId);
 
       // ✅ UX correta: candidatura criada
       Alert.alert(
@@ -435,7 +425,7 @@ export default function RegisterRestaurant() {
       // =====================
       uploadLicense(registrationId, operatingLicense, "operating")
         .then((operating) => {
-          return fetch("http://172.23.116.59:3001/save-license-url", {
+          return fetch("http://192.168.0.xxx:3001/save-license-url", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -449,7 +439,6 @@ export default function RegisterRestaurant() {
           });
         })
         .catch((error) => {
-          console.log("ERRO UPLOAD lICENÇAS 1");
           console.warn(
             "⚠️ Falha no upload da licença de funcionamento:",
             error,
@@ -458,7 +447,7 @@ export default function RegisterRestaurant() {
 
       uploadLicense(registrationId, sanitaryLicense, "sanitary")
         .then((sanitary) => {
-          return fetch("http://172.23.116.59:3001/save-license-url", {
+          return fetch("http://192.168.0.xxx:3001/save-license-url", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -472,11 +461,10 @@ export default function RegisterRestaurant() {
           });
         })
         .catch((error) => {
-          console.log("ERRO UPLOAD lICENÇAS 2");
           console.warn("⚠️ Falha no upload da licença sanitária:", error);
         });
     } catch (error) {
-      console.error("❌ ERRO COMPLETO:", error);
+      console.error("❌ Erro no submit:", error);
       Alert.alert("Erro ao enviar", "Não foi possível concluir o envio.");
     } finally {
       setIsSubmitting(false);

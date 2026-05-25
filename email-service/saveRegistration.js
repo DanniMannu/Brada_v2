@@ -46,6 +46,7 @@ export const saveRegistration = async (payload = {}) => {
     .single();
 
   if (error) {
+    console.error("Erro ao guardar candidatura:", error);
     throw error;
   }
 

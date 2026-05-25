@@ -106,6 +106,14 @@ create table email_logs (
   created_at timestamp with time zone default now()
 );
 
+
+--bloqueio de conta após 3 tentativas
+create table if not exists login_attempts (
+  email text primary key,
+  attempt_count integer default 0,
+  blocked_until timestamp
+);
+
 create table courier_applications (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references profiles(id),
