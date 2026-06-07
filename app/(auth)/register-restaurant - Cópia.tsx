@@ -425,7 +425,7 @@ export default function RegisterRestaurant() {
       // =====================
       uploadLicense(registrationId, operatingLicense, "operating")
         .then((operating) => {
-          return fetch("http://192.168.0.xxx:3001/save-license-url", {
+          return fetch("http://10.248.204.59:3001/save-license-url", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -447,7 +447,7 @@ export default function RegisterRestaurant() {
 
       uploadLicense(registrationId, sanitaryLicense, "sanitary")
         .then((sanitary) => {
-          return fetch("http://192.168.0.xxx:3001/save-license-url", {
+          return fetch("http://10.248.204.59:3001/save-license-url", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

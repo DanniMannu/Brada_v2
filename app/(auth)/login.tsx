@@ -1,10 +1,12 @@
 import Button from "@/components/ui/Button";
 import Links from "@/components/ui/Links";
-import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
+
+import { getEstablishmentId, setEstablishmentId } from "@/lib/session";
+
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -12,16 +14,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const MAX_ATTEMPTS = 3;
-const BLOCK_MINUTES = 15;
-
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [focused, setFocused] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const { login } = useAuth();
+  const [loading] = useState(false);
 
   // =====================
   // LOGO ANIMATION
@@ -43,79 +40,33 @@ export default function LoginScreen() {
   // LOGIN HANDLER
   // =====================
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Erro", "Preenche todos os campos");
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.user) return;
+
+    const { data: est } = await supabase
+      .from("establishments")
+      .select("id")
+      .eq("user_id", data.user.id);
+
+    if (!est || est.length === 0) {
+      alert("Sem estabelecimento");
       return;
     }
 
-    if (loading) return;
-    setLoading(true);
+    console.log("SETTING EST:", est[0].id);
 
-    try {
-      const now = new Date();
+    // ✅ guarda corretamente
+    await setEstablishmentId(est[0].id);
 
-      // 🔍 verificar tentativas
-      const { data: attempt } = await supabase
-        .from("login_attempts")
-        .select("*")
-        .eq("email", email)
-        .single();
+    // ✅ valida (CORRIGIDO)
+    const test = await getEstablishmentId();
+    console.log("SAVED CHECK:", test);
 
-      if (attempt?.blocked_until && new Date(attempt.blocked_until) > now) {
-        Alert.alert(
-          "Conta bloqueada",
-          "Demasiadas tentativas. Tenta novamente mais tarde.",
-        );
-        setLoading(false);
-        return;
-      }
-
-      // ✅ login real
-      const roles = await login(email, password);
-
-      if (!roles) {
-        const attempts = (attempt?.attempt_count || 0) + 1;
-
-        let blocked_until = null;
-        if (attempts >= MAX_ATTEMPTS) {
-          blocked_until = new Date(
-            now.getTime() + BLOCK_MINUTES * 60 * 1000,
-          ).toISOString();
-        }
-
-        await supabase.from("login_attempts").upsert({
-          email,
-          attempt_count: attempts,
-          blocked_until,
-        });
-
-        Alert.alert("Erro", "Credenciais inválidas");
-        setLoading(false);
-        return;
-      }
-
-      // ✅ sucesso → reset tentativas
-      await supabase.from("login_attempts").upsert({
-        email,
-        attempt_count: 0,
-        blocked_until: null,
-      });
-
-      // ✅ routing por role
-      if (roles.length === 1) {
-        const role = roles[0];
-        if (role === "client") router.replace("./(client)");
-        if (role === "restaurant") router.replace("./(establishment)");
-        if (role === "courier") router.replace("./(courier)");
-      } else {
-        router.push("./select_role");
-      }
-    } catch (err) {
-      console.error("Erro login:", err);
-      Alert.alert("Erro", "Ocorreu um erro inesperado");
-    } finally {
-      setLoading(false);
-    }
+    router.replace("/(establishment)");
   };
 
   // =====================
@@ -180,42 +131,37 @@ export default function LoginScreen() {
 // STYLES
 // =====================
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#F9F9F9",
-  },
+  safe: { flex: 1, backgroundColor: "#F9F9F9" },
+
   container: {
     flex: 1,
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 70,
   },
+
   logo: {
     fontSize: 50,
     fontWeight: "900",
     color: "#782726",
     marginBottom: 10,
-    letterSpacing: 1.2,
   },
+
   card: {
     width: "100%",
     maxWidth: 420,
     backgroundColor: "#FFFFFF",
-    paddingVertical: 22,
-    paddingHorizontal: 26,
+    padding: 22,
     borderRadius: 14,
     marginTop: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 4,
   },
+
   title: {
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 12,
-    color: "#1C1C1C",
   },
+
   input: {
     borderWidth: 1,
     borderColor: "#E5E5E5",
@@ -223,6 +169,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 12,
   },
+
   inputFocused: {
     borderColor: "#782726",
   },

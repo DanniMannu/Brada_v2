@@ -25,15 +25,7 @@ create table registrations (
 );
 
 
-create table products (
-  id uuid primary key default gen_random_uuid(),
-  registration_id uuid not null references registrations(id) on delete cascade,
-  name text not null,
-  description text,
-  category text,
-  price text,
-  created_at timestamp with time zone default now()
-);
+
 
 create table product_images (
   id uuid primary key default gen_random_uuid(),
@@ -60,16 +52,6 @@ create table menu_images (
   created_at timestamp with time zone default now()
 );
 
-create table menu_products (
-  id uuid primary key default gen_random_uuid(),
-  menu_id uuid not null
-    references menus(id) on delete cascade,
-  product_id uuid not null
-    references products(id) on delete cascade,
-  position integer,
-  created_at timestamp with time zone default now(),
-  unique (menu_id, product_id)
-);
 
 create table licenses (
   id uuid primary key default gen_random_uuid(),
@@ -128,4 +110,154 @@ create table courier_applications (
   thermal_bag_photo text,
   status text default 'pending',
   created_at timestamp default now()
+);
+
+
+
+
+create table order_items (
+  id uuid primary key default uuid_generate_v4(),
+  order_id uuid references orders(id),
+  product_name text,
+  quantity int,
+  price numeric
+);
+
+create table customers (
+  id uuid primary key default uuid_generate_v4(),
+  name text,
+  email text,
+  phone text,
+  created_at timestamp default now()
+);
+
+
+create table drivers (
+  id uuid primary key default uuid_generate_v4(),
+  name text,
+  phone text,
+  status text default 'available'
+);
+
+create table orders (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid not null,
+  customer_id uuid not null,
+  driver_id uuid null, -- ✅ PODE SER NULL
+  total numeric,
+  status text default 'pending',
+  created_at timestamp default now()
+);
+
+
+create table user_profiles (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id),
+  role text, -- 'customer', 'restaurant', 'driver'
+  created_at timestamp default now()
+);
+
+
+create table establishments (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) not null,
+  name text not null,
+  contact text not null,
+  stores int,
+  nuit int,
+  address text,
+  owner_name text,
+  email text,
+  created_at timestamp default now()
+);
+
+-- PRODUCTS
+create table products (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid,
+  name text not null,
+  description text,
+  category text,
+  price numeric,
+  active boolean default true,
+  created_at timestamp default now()
+);
+
+-- MENUS
+create table menus (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid,
+  name text not null,
+  description text,
+  price numeric,
+  active boolean default true,
+  created_at timestamp default now()
+);
+
+-- MENU ↔ PRODUCTS (relação N:N)
+create table menu_products (
+  id uuid primary key default uuid_generate_v4(),
+  menu_id uuid references menus(id) on delete cascade,
+  product_id uuid references products(id) on delete cascade
+);
+
+-- PROMOTIONS
+create table promotions (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid,
+  title text,
+  description text,
+  price numeric,
+  discount numeric,
+  active boolean default true,
+  created_at timestamp default now()
+);
+
+create table promotions_products (
+  id uuid primary key default uuid_generate_v4(),
+  promotions_id uuid references promotions(id) on delete cascade,
+  product_id uuid references products(id) on delete cascade
+);
+
+create policy "read products"
+on products
+for select
+using (true);
+
+
+create policy "read menus"
+on menus
+for select
+using (true);
+
+create policy "read menu_products"
+on menu_products
+for select
+using (true);
+
+create policy "read promotions"
+on promotions
+for select
+using (true);
+
+create policy "read promotions_products"
+on promotions_products
+for select
+using (true);
+
+create policy "update own promotions"
+on public.promotions
+for update
+to authenticated
+using (
+  establishment_id IN (
+    select id from establishments
+    where user_id = auth.uid()
+  )
+)
+with check (
+  establishment_id IN (
+    select id from establishments
+    where user_id = auth.uid()
+  )
 );
