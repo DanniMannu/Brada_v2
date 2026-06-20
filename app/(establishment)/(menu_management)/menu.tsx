@@ -198,7 +198,7 @@ export default function RestaurantMenu() {
                   <Pressable
                     onPress={() =>
                       router.push({
-                        pathname: "/(establishment)/editMenu",
+                        pathname: "/(establishment)/(menu_management)/editMenu",
                         params: { id: item.id },
                       })
                     }
@@ -257,7 +257,8 @@ export default function RestaurantMenu() {
                   <Pressable
                     onPress={() =>
                       router.push({
-                        pathname: "/(establishment)/editProduct",
+                        pathname:
+                          "/(establishment)/(menu_management)/editProduct",
                         params: { id: item.id },
                       })
                     }
@@ -359,7 +360,8 @@ export default function RestaurantMenu() {
                     <Pressable
                       onPress={() =>
                         router.push({
-                          pathname: "/(establishment)/editPromo",
+                          pathname:
+                            "/(establishment)/(menu_management)/editPromo",
                           params: { id: item.id },
                         })
                       }
@@ -370,7 +372,8 @@ export default function RestaurantMenu() {
                     <Pressable
                       onPress={async () => {
                         router.push({
-                          pathname: "/(establishment)/deletePromo",
+                          pathname:
+                            "/(establishment)/(menu_management)/deletePromo",
                           params: { id: item.id },
                         });
                       }}
@@ -391,13 +394,13 @@ export default function RestaurantMenu() {
           onPress={() => {
             switch (tab) {
               case "menu":
-                router.push("/(establishment)/addMenu");
+                router.push("/(establishment)/(menu_management)/addMenu");
                 break;
               case "products":
-                router.push("/(establishment)/addProduct");
+                router.push("/(establishment)/(menu_management)/addProduct");
                 break;
               case "promo":
-                router.push("/(establishment)/editPromo");
+                router.push("/(establishment)/(menu_management)/editPromo");
                 break;
             }
           }}

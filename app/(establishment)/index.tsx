@@ -3,6 +3,7 @@ import Button from "@/components/ui/Button";
 import { getEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { Order, OrderStatus } from "@/types";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   FlatList,
@@ -22,6 +23,7 @@ export default function Home() {
 
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 768;
+  const router = useRouter();
 
   const fetchData = async () => {
     const currentEstablishmentId = await getEstablishmentId();
@@ -128,7 +130,7 @@ export default function Home() {
       <View style={styles.floatingWrapper}>
         <Button
           title="Fala com o teu Brada"
-          onPress={() => {}}
+          onPress={() => router.push("/(establishment)/support")}
           style={{ marginTop: 10 }}
         />
       </View>
