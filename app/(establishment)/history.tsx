@@ -1,14 +1,10 @@
 import { getEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
 export default function History() {
   const [orders, setOrders] = useState<any[]>([]);
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
 
   const loadOrders = async () => {
     const currentEstablishmentId = await getEstablishmentId();
@@ -22,6 +18,13 @@ export default function History() {
 
     setOrders(data || []);
   };
+
+  useEffect(() => {
+    const fetch = async () => {
+      await loadOrders();
+    };
+    fetch();
+  }, []);
 
   return (
     <View style={styles.container}>

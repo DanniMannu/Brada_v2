@@ -261,3 +261,245 @@ with check (
     where user_id = auth.uid()
   )
 );
+
+
+create table stores (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid not null
+  references establishments(id) on delete cascade,
+  name text not null,
+  address text not null,
+  contact text,
+  latitude numeric,
+  longitude numeric,
+  is_active boolean default true,
+  created_at timestamp default now()
+);
+
+create table payment_settings (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid unique not null
+  references establishments(id) on delete cascade,
+  method text not null check (
+    method in ('mpesa','mkesh','emola')
+  ),
+  account_name text,
+  account_number text,
+  updated_at timestamp default now()
+);
+
+create table invoices (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid not null
+  references establishments(id) on delete cascade,
+  invoice_number text not null,
+  amount numeric(10,2) not null,
+  file_url text,
+  status text default 'paid',
+  created_at timestamp default now()
+);
+
+alter table establishments
+add column vacation_mode boolean default false;
+
+create table establishment_hours (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid references establishments(id) on delete cascade,
+  day_of_week int not null, -- 0=domingo, 1=segunda ... 6=sábado
+  open_time time not null,
+  close_time time not null,
+  created_at timestamp default now()
+);
+
+create table establishment_documents (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid not null
+  references establishments(id) on delete cascade,
+  document_type text not null,
+  title text not null,
+  file_url text,
+  created_at timestamp default now()
+);
+
+create table store_schedules (
+  id uuid default uuid_generate_v4() primary key,
+  establishment_id uuid not null
+  references establishments(id) on delete cascade,  day text not null,
+  store_id uuid not null
+  references stores(id) on delete cascade,
+  closed boolean default false,
+  open_morning text,
+  close_morning text,
+  open_afternoon text,
+  close_afternoon text
+);
+
+alter table establishments
+add column logo_url text;
+
+alter table establishments
+add column cover_url text;
+
+alter table establishments
+add column description text;
+
+alter table establishments
+add column active boolean default true;
+
+alter table establishments
+add column opening_hours jsonb;
+
+alter table establishments
+add column if not exists partnership_contract_url text,
+add column if not exists terms_url text;
+
+alter table promotions
+add column promo_code text,
+add column discount_type text,
+add column minimum_purchase numeric,
+add column start_date date,
+add column end_date date,
+add column max_uses integer,
+add column uses_per_customer integer,
+add column customer_type text,
+add column status text default 'active';
+
+ALTER TABLE promotions
+ADD COLUMN final_price numeric DEFAULT 0;
+
+create policy "Allow insert promotions"
+on promotions
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow update promotions"
+on promotions
+for update
+to authenticated
+using (true)
+with check (true);
+
+create policy "Allow delete promotions"
+on promotions
+for delete
+to authenticated
+using (true);
+
+create policy "Allow insert promotion products"
+on promotion_products
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow insert promotion products"
+on promotions_products
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow delete promotion products"
+on promotions_products
+for delete
+to authenticated
+using (true);
+
+create policy "Allow read promotion products"
+on promotions_products
+for select
+to authenticated
+using (true);
+
+create policy "Allow insert stores"
+on stores
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow delete stores"
+on stores
+for delete
+to authenticated
+using (true);
+
+create policy "Allow read stores"
+on stores
+for select
+to authenticated
+using (true);
+
+
+create policy "Allow update payment_settings"
+on payment_settings
+for update
+to authenticated
+using (true)
+with check (true);
+
+create policy "Allow insert payment_settings"
+on payment_settings
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow delete payment_settings"
+on payment_settings
+for delete
+to authenticated
+using (true);
+
+create policy "Allow read payment_settings"
+on payment_settings
+for select
+to authenticated
+using (true);
+
+
+create policy "Allow insert store_schedules"
+on store_schedules
+for insert
+to authenticated
+with check (true);
+
+create policy "Allow delete store_schedules"
+on store_schedules
+for delete
+to authenticated
+using (true);
+
+create policy "Allow read store_schedules"
+on store_schedules
+for select
+to authenticated
+using (true);
+
+
+create policy "Allow update stores"
+on stores
+for update
+to authenticated
+using (true)
+with check (true);
+
+create policy "Allow update schedules"
+on store_schedules
+for update
+to authenticated
+using (true)
+with check (true);
+
+create table public.store_schedules (
+  id uuid primary key default uuid_generate_v4(),
+  establishment_id uuid not null
+  references establishments(id)
+  on delete cascade,
+  store_id uuid not null
+  references stores(id)
+  on delete cascade,
+  weekday integer not null check (weekday between 0 and 6),
+  opens_at time,
+  closes_at time,
+  is_closed boolean not null default false,
+  created_at timestamp default now(),
+  unique(store_id, weekday)
+);

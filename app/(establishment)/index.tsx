@@ -3,8 +3,15 @@ import Button from "@/components/ui/Button";
 import { getEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { Order, OrderStatus } from "@/types";
-import React, { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Home() {
@@ -13,9 +20,8 @@ export default function Home() {
   const [count, setCount] = useState(0);
   const [name, setName] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width > 768;
 
   const fetchData = async () => {
     const currentEstablishmentId = await getEstablishmentId();
@@ -40,6 +46,14 @@ export default function Home() {
     const total = data?.reduce((acc, o) => acc + Number(o.total), 0) || 0;
     setSales(total);
   };
+
+  useEffect(() => {
+    const fetchDataEffect = async () => {
+      await fetchData();
+    };
+
+    void fetchDataEffect();
+  }, []);
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     await supabase.from("orders").update({ status }).eq("id", id);
@@ -76,102 +90,74 @@ export default function Home() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* CONTEÚDO CENTRAL */}
-      <View style={styles.centerWrapper}>
-        <View style={styles.content}>
-          <Text style={styles.greeting}>Olá {name}</Text>
+      <FlatList
+        contentContainerStyle={styles.scrollContent}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.greeting}>Olá {name}</Text>
 
-          {/* CARDS */}
-          <View style={styles.cards}>
-            <View style={styles.card}>
-              <Text style={styles.big}>{sales} MT</Text>
-              <Text>Total de Vendas</Text>
+            <View
+              style={[
+                styles.cards,
+                { flexDirection: isLargeScreen ? "row" : "column" },
+              ]}
+            >
+              <View style={styles.card}>
+                <Text style={styles.big}>{sales} MT</Text>
+                <Text>Total de Vendas</Text>
+              </View>
+
+              <View style={styles.card}>
+                <Text style={styles.big}>{count}</Text>
+                <Text>Pedidos Hoje</Text>
+              </View>
             </View>
 
-            <View style={styles.card}>
-              <Text style={styles.big}>{count}</Text>
-              <Text>Pedidos Hoje</Text>
-            </View>
-          </View>
+            <Text style={styles.section}>Pedidos Ativos</Text>
+          </>
+        }
+        data={orders}
+        renderItem={renderOrder}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={
+          <Text style={styles.empty}>📭 Aguardando pedidos...</Text>
+        }
+      />
 
-          {/* PEDIDOS */}
-          <Text style={styles.section}>Pedidos Ativos</Text>
-
-          {orders.length === 0 ? (
-            <Text style={styles.empty}>📭 Aguardando pedidos...</Text>
-          ) : (
-            <FlatList
-              data={orders}
-              renderItem={renderOrder}
-              keyExtractor={(item) => item.id}
-            />
-          )}
-
-          {/* SUPORTE */}
-
-          <View style={styles.floatingWrapper}>
-            <Button
-              title="Fala com o teu Brada"
-              onPress={() => {
-                // Handle support button press
-              }}
-              style={{
-                marginBottom: 80,
-                marginRight: 40,
-                alignSelf: "flex-end",
-              }}
-            />
-          </View>
-        </View>
+      {/* BOTÃO FIXO SEM SOBREPOSIÇÃO */}
+      <View style={styles.floatingWrapper}>
+        <Button
+          title="Fala com o teu Brada"
+          onPress={() => {}}
+          style={{ marginTop: 10 }}
+        />
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F5F5F5" },
-
-  topBar: {
-    backgroundColor: "#782726",
-    paddingTop: 20,
-    paddingBottom: 14,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  floatingWrapper: {
-    position: "absolute",
-    bottom: -500,
-    right: -15,
-
-    width: 280, // ✅ controlar largura do botão
-  },
-
-  logo: { color: "#fff", fontSize: 25, fontWeight: "700" },
-  icon: { color: "#fff", fontSize: 25 },
-
-  centerWrapper: {
+  container: {
     flex: 1,
-    alignItems: "center",
-    paddingTop: 15,
+    backgroundColor: "#F5F5F5",
   },
 
-  content: {
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 120,
     width: "100%",
-    maxWidth: 420,
-    paddingHorizontal: 16,
   },
 
   greeting: {
-    textAlign: "left",
-    marginBottom: 20,
     fontSize: 22,
     fontWeight: "700",
-    marginTop: -25,
+    marginBottom: 20,
   },
 
-  cards: { flexDirection: "row", gap: 10 },
+  cards: {
+    gap: 12,
+    marginBottom: 10,
+  },
 
   card: {
     flex: 1,
@@ -181,11 +167,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  big: { fontSize: 22, fontWeight: "700" },
+  big: {
+    fontSize: 22,
+    fontWeight: "700",
+  },
 
-  section: { marginTop: 20, fontWeight: "700", fontSize: 19 },
+  section: {
+    marginTop: 20,
+    fontWeight: "700",
+    fontSize: 19,
+  },
 
-  empty: { textAlign: "center", marginTop: 20 },
+  empty: {
+    textAlign: "center",
+    marginTop: 20,
+  },
 
   orderCard: {
     backgroundColor: "#fff",
@@ -194,9 +190,15 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  orderTitle: { fontWeight: "700" },
+  orderTitle: {
+    fontWeight: "700",
+  },
 
-  buttons: { flexDirection: "row", gap: 10, marginTop: 10 },
+  buttons: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
 
   btn: {
     backgroundColor: "#782726",
@@ -204,24 +206,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 
-  gray: { backgroundColor: "#ccc" },
-  btnText: { color: "#fff" },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    zIndex: 10,
+  gray: {
+    backgroundColor: "#ccc",
   },
 
-  supportBtn: {
-    marginTop: 25,
-    padding: 14,
-    backgroundColor: "#eee",
-    borderRadius: 10,
-    alignItems: "center",
+  btnText: {
+    color: "#fff",
   },
 
-  supportText: {
-    fontWeight: "600",
+  floatingWrapper: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    left: 20,
   },
 });

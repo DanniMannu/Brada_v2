@@ -1,7 +1,7 @@
 import { getEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -13,6 +13,25 @@ import {
 
 const PRIMARY = "#782726";
 
+type Promotion = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  discount: number | null;
+  final_price: number | null;
+  discount_type: "Fixo" | "Percentagem";
+  active: boolean;
+  promo_code?: string | null;
+  promotions_products?: {
+    product_id: string;
+    products?: {
+      id: string;
+      name: string;
+    } | null;
+  }[];
+};
+
 export default function RestaurantMenu() {
   const [tab, setTab] = useState<"menu" | "categories" | "products" | "promo">(
     "menu",
@@ -21,85 +40,75 @@ export default function RestaurantMenu() {
   const [showFilter, setShowFilter] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [menus, setMenus] = useState<any[]>([]);
-  const [promos, setPromos] = useState<any[]>([]);
+  const [promos, setPromos] = useState<Promotion[]>([]);
 
   useEffect(() => {
-    loadData();
-  }, []);
-  /*
-  const deleteProduct = async (id: string) => {
-    try {
-      const { data: images } = await supabase
-        .from("product_images")
-        .select("file_name")
-        .eq("product_id", id);
+    let isMounted = true;
 
-      if (images && images.length > 0) {
-        const files = images.map((img) => img.file_name);
-        const { error: storageError } = await supabase.storage
+    const loadData = async () => {
+      try {
+        const currentEstablishmentId = await getEstablishmentId();
+        if (!currentEstablishmentId || !isMounted) return;
+
+        const { data: productsData } = await supabase
           .from("products")
-          .remove(files);
+          .select("*")
+          .eq("establishment_id", currentEstablishmentId);
 
-        if (storageError) {
-          console.error("Erro ao apagar storage:", storageError);
+        const { data: menusData } = await supabase
+          .from("menus")
+          .select(
+            `
+          *,
+          menu_products (
+            product_id
+          )
+        `,
+          )
+          .eq("establishment_id", currentEstablishmentId);
+
+        const { data: promosData } = await supabase
+          .from("promotions")
+          .select(
+            `
+            *,
+            promotions_products (
+              product_id,
+              products (
+                id,
+                name
+              )
+            )
+          `,
+          )
+          .eq("establishment_id", currentEstablishmentId);
+
+        if (isMounted) {
+          setProducts(productsData || []);
+          setMenus(menusData || []);
+          setPromos(promosData || []);
         }
+      } catch (err) {
+        console.error("Erro geral no loadData:", err);
       }
+    };
 
-      const { error } = await supabase.from("products").delete().eq("id", id);
+    loadData();
 
-      if (error) {
-        console.error("Erro ao apagar produto:", error);
-        return;
-      }
-
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      console.error("Erro inesperado:", err);
-    }
-  };*/
-
-  const loadData = async () => {
-    try {
-      const currentEstablishmentId = await getEstablishmentId();
-      if (!currentEstablishmentId) {
-        console.error("No establishment ID found in session");
-        return;
-      }
-
-      const { data: productsData } = await supabase
-        .from("products")
-        .select("*")
-        .eq("establishment_id", currentEstablishmentId);
-
-      const { data: menusData } = await supabase
-        .from("menus")
-        .select(
-          `
-        *,
-        menu_products (
-          product_id
-        )
-      `,
-        )
-        .eq("establishment_id", currentEstablishmentId);
-
-      const { data: promosData } = await supabase
-        .from("promotions")
-        .select("*")
-        .eq("establishment_id", currentEstablishmentId);
-
-      setProducts(productsData || []);
-      setMenus(menusData || []);
-      setPromos(promosData || []);
-    } catch (err) {
-      console.error("Erro geral no loadData:", err);
-    }
-  };
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const sortList = (list: any[]) =>
-    [...list].sort((a, b) =>
-      sortAZ ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
-    );
+    [...list].sort((a, b) => {
+      const aValue = (a.name || a.title || "").toString();
+      const bValue = (b.name || b.title || "").toString();
+
+      return sortAZ
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    });
 
   const togglePromo = async (id: string, value: boolean) => {
     try {
@@ -158,7 +167,6 @@ export default function RestaurantMenu() {
 
   return (
     <View style={styles.container}>
-      {/* ✅ TABS */}
       <View style={styles.tabs}>
         {[
           { key: "menu", label: "Menus" },
@@ -174,7 +182,7 @@ export default function RestaurantMenu() {
         ))}
       </View>
 
-      {/* ✅ MENUS */}
+      {/* MENUS */}
       {tab === "menu" && (
         <>
           {renderFilter()}
@@ -201,7 +209,6 @@ export default function RestaurantMenu() {
                   <Pressable
                     onPress={async () => {
                       await supabase.from("menus").delete().eq("id", item.id);
-                      loadData();
                     }}
                   >
                     <Text style={styles.delete}>Remover</Text>
@@ -213,7 +220,7 @@ export default function RestaurantMenu() {
         </>
       )}
 
-      {/* ✅ CATEGORIES */}
+      {/* CATEGORIES */}
       {tab === "categories" && (
         <>
           {renderFilter()}
@@ -234,7 +241,7 @@ export default function RestaurantMenu() {
         </>
       )}
 
-      {/* ✅ PRODUCTS */}
+      {/* PRODUCTS */}
       {tab === "products" && (
         <>
           {renderFilter()}
@@ -264,7 +271,6 @@ export default function RestaurantMenu() {
                         .from("products")
                         .delete()
                         .eq("id", item.id);
-                      loadData();
                     }}
                   >
                     <Text style={styles.delete}>Remover</Text>
@@ -276,26 +282,79 @@ export default function RestaurantMenu() {
         </>
       )}
 
-      {/* ✅ PROMOS */}
+      {/* PROMOS */}
+
       {tab === "promo" && (
         <>
           {renderFilter()}
           <FlatList
-            data={promos}
-            keyExtractor={(i) => i.id}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <Text style={styles.title}>{item.title}</Text>
+            data={sortList(promos)}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }: { item: Promotion }) => {
+              const originalPrice = Number(item.price || 0);
+              const discountRaw = Number(item.discount || 0);
+              const finalPrice = Number(item.final_price || 0);
 
-                <View style={styles.rowBetween}>
-                  <Text>{item.discount}%</Text>
-                  <Switch
-                    value={item.active}
-                    onValueChange={() => togglePromo(item.id, item.active)}
-                    trackColor={{ false: "#ccc", true: "#782726" }}
-                    thumbColor={item.active ? "#ffffff" : "#f4f3f4"}
-                  />
+              //  garantir valores válidos
+              const discount = Math.max(discountRaw, 0);
 
+              //  poupança real
+              const savings = originalPrice - finalPrice;
+
+              const productNames =
+                item.promotions_products
+                  ?.map((p) => p.products?.name)
+                  .filter(Boolean)
+                  .join(" • ") || "";
+
+              return (
+                <View style={styles.promoCard}>
+                  <View style={styles.promoHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.promoTitle}>{item.title}</Text>
+
+                      {!!productNames && (
+                        <Text style={styles.productsText}>{productNames}</Text>
+                      )}
+                    </View>
+
+                    <Switch
+                      value={item.active}
+                      onValueChange={() => togglePromo(item.id, item.active)}
+                      trackColor={{ false: "#ddd", true: PRIMARY }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+
+                  <View style={styles.priceBox}>
+                    <Text style={styles.originalPriceLabel}>Pagavas</Text>
+
+                    <Text style={styles.originalPrice}>
+                      {originalPrice.toFixed(2)} MT
+                    </Text>
+
+                    <Text style={styles.nowPriceLabel}>Agora pagas</Text>
+
+                    <Text style={styles.nowPrice}>
+                      {finalPrice.toFixed(2)} MT
+                    </Text>
+
+                    <Text style={styles.discountBadge}>
+                      {item.discount_type === "Percentagem"
+                        ? `${discount}% OFF`
+                        : `-${discount.toFixed(2)} MT`}
+                    </Text>
+
+                    {savings > 0 && (
+                      <Text style={styles.savings}>
+                        Poupa {savings.toFixed(2)} MT
+                      </Text>
+                    )}
+                  </View>
+
+                  <View style={styles.promoDivider} />
+
+                  {/*  EDITAR + REMOVER MANTIDOS */}
                   <View style={styles.row}>
                     <Pressable
                       onPress={() =>
@@ -310,24 +369,22 @@ export default function RestaurantMenu() {
 
                     <Pressable
                       onPress={async () => {
-                        await supabase
-                          .from("promotions")
-                          .delete()
-                          .eq("id", item.id);
-                        loadData();
+                        router.push({
+                          pathname: "/(establishment)/deletePromo",
+                          params: { id: item.id },
+                        });
                       }}
                     >
                       <Text style={styles.delete}>Remover</Text>
                     </Pressable>
                   </View>
                 </View>
-              </View>
-            )}
+              );
+            }}
           />
         </>
       )}
 
-      {/* ✅ FAB DINÂMICO (esconde nas categorias) */}
       {["menu", "products", "promo"].includes(tab) && (
         <Pressable
           style={styles.fab}
@@ -340,7 +397,7 @@ export default function RestaurantMenu() {
                 router.push("/(establishment)/addProduct");
                 break;
               case "promo":
-                router.push("/(establishment)/addPromo");
+                router.push("/(establishment)/editPromo");
                 break;
             }
           }}
@@ -368,28 +425,31 @@ const styles = StyleSheet.create({
   },
   filterContainer: { marginBottom: 10 },
   filterText: { color: PRIMARY, fontWeight: "600" },
+
   dropdown: {
     backgroundColor: "#fff",
     padding: 10,
     marginTop: 5,
     borderRadius: 10,
   },
+
   dropdownItem: { paddingVertical: 6 },
+
   card: {
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 10,
   },
+
   title: { fontWeight: "700", fontSize: 16 },
+
   row: { flexDirection: "row", marginTop: 10, gap: 20 },
-  rowBetween: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
+
   link: { color: PRIMARY },
+
   delete: { color: "red" },
+
   fab: {
     position: "absolute",
     bottom: 20,
@@ -401,5 +461,82 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   fabText: { color: "#fff", fontSize: 24 },
+
+  promoCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 14,
+    elevation: 2,
+  },
+
+  promoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  promoTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+
+  promoDescription: {
+    marginTop: 12,
+    color: "#666",
+  },
+
+  priceBox: {
+    marginTop: 16,
+    backgroundColor: "#FFF8F8",
+    borderRadius: 12,
+    padding: 14,
+  },
+
+  originalPriceLabel: {
+    color: "#777",
+    fontSize: 12,
+  },
+
+  originalPrice: {
+    textDecorationLine: "line-through",
+    fontWeight: "700",
+  },
+
+  nowPriceLabel: {
+    marginTop: 8,
+    color: "#777",
+    fontSize: 12,
+  },
+
+  nowPrice: {
+    fontWeight: "800",
+    color: PRIMARY,
+  },
+
+  discountBadge: {
+    marginTop: 6,
+    color: PRIMARY,
+    fontWeight: "700",
+  },
+
+  savings: {
+    marginTop: 8,
+    color: "#0F9D58",
+    fontWeight: "700",
+  },
+
+  productsText: {
+    marginTop: 6,
+    color: PRIMARY,
+    fontWeight: "600",
+  },
+
+  promoDivider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 14,
+  },
 });

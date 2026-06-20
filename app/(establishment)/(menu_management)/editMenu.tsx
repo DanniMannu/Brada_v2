@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -31,60 +31,69 @@ export default function EditMenu() {
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    loadMenu();
-  }, []);
+    if (!id) return;
 
-  // ✅ Receber produtos vindos do SelectProducts
-  useEffect(() => {
-    if (params.selectedProducts) {
+    const fetchMenu = async () => {
       try {
-        setSelectedProducts(JSON.parse(params.selectedProducts as string));
-      } catch {
-        setSelectedProducts([]);
-      }
-    }
-  }, [params.selectedProducts]);
-
-  const loadMenu = async () => {
-    try {
-      console.log("MENU ID:", id);
-      const { data, error } = await supabase
-        .from("menus")
-        .select(
-          `
+        console.log("MENU ID:", id);
+        const { data, error } = await supabase
+          .from("menus")
+          .select(
+            `
           *,
           menu_products(
             product:products(*)
           )
         `,
-        )
-        .eq("id", id)
-        .single();
+          )
+          .eq("id", id)
+          .single();
 
-      if (error) {
-        console.error(error);
-        return;
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        setName(data.name || "");
+        setDescription(data.description || "");
+        setPrice(data.price ? String(data.price) : "");
+        setActive(data.active ?? true);
+
+        const products =
+          data.menu_products?.map((item: any) => item.product) || [];
+
+        setSelectedProducts(products);
+      } catch (err) {
+        console.error(err);
       }
+    };
 
-      setName(data.name || "");
-      setDescription(data.description || "");
-      setPrice(data.price ? String(data.price) : "");
-      setActive(data.active ?? true);
+    void fetchMenu();
+  }, [id]);
 
-      const products =
-        data.menu_products?.map((item: any) => item.product) || [];
-
-      setSelectedProducts(products);
-    } catch (err) {
-      console.error(err);
+  // ✅ Receber produtos vindos do SelectProducts
+  useEffect(() => {
+    if (!params.selectedProducts) {
+      return;
     }
-  };
+
+    const timeoutId = setTimeout(() => {
+      try {
+        const parsed = JSON.parse(params.selectedProducts as string);
+        setSelectedProducts(parsed);
+      } catch {
+        setSelectedProducts([]);
+      }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [params.selectedProducts]);
 
   const openProductSelector = () => {
     router.push({
-      pathname: "/(establishment)/select-products",
+      pathname: "/(establishment)/(menu_management)/select-products",
       params: {
-        returnTo: "/(establishment)/editMenu",
+        returnTo: "/(establishment)/(menu_management)/editMenu",
         id,
         selectedProducts: JSON.stringify(selectedProducts),
       },

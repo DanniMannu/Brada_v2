@@ -1,6 +1,6 @@
 import { Product } from "@/components/others/Product";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function AddMenu() {
@@ -12,13 +12,19 @@ export default function AddMenu() {
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
   // Receber produtos selecionados
+  // Sync selected products from navigation params when params change.
+  // Only depend on params.selectedProducts to avoid cascading renders
+  // caused by including selectedProducts in the dependency array.
   useEffect(() => {
-    if (params.selectedProducts) {
-      try {
-        setSelectedProducts(JSON.parse(params.selectedProducts as string));
-      } catch {
-        setSelectedProducts([]);
-      }
+    if (!params.selectedProducts) return;
+
+    try {
+      const parsed = JSON.parse(params.selectedProducts as string) as Product[];
+      // Avoid synchronous setState inside effect to prevent cascading renders
+      // schedule update asynchronously.
+      setTimeout(() => setSelectedProducts(parsed ?? []), 0);
+    } catch {
+      setTimeout(() => setSelectedProducts([]), 0);
     }
   }, [params.selectedProducts]);
 
@@ -72,9 +78,9 @@ export default function AddMenu() {
         style={styles.selectBtn}
         onPress={() =>
           router.push({
-            pathname: "/(establishment)/select-products",
+            pathname: "/(establishment)/(menu_management)/select-products",
             params: {
-              returnTo: "/(establishment)/addMenu",
+              returnTo: "/(establishment)/(menu_management)/addMenu",
               selectedProducts: JSON.stringify(selectedProducts),
             },
           })

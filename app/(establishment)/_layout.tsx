@@ -1,7 +1,7 @@
 import { clearEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { Slot, router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -52,19 +52,28 @@ export default function EstablishmentLayout() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
-                router.push("/(establishment)/account");
+                router.push("/(establishment)/(stores)");
               }}
             >
-              <Text style={styles.drawerItem}>👤 Conta</Text>
+              <Text style={styles.drawerItem}>🏪 Lojas</Text>
             </Pressable>
 
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
-                router.push("/(establishment)/menu");
+                router.push("/(establishment)/(menu_management)/menu");
               }}
             >
-              <Text style={styles.drawerItem}>🍽️ Gerir Menu</Text>
+              <Text style={styles.drawerItem}>🍽️ Menu</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("/(establishment)/(payments)/payments");
+              }}
+            >
+              <Text style={styles.drawerItem}>💳 Pagamentos</Text>
             </Pressable>
 
             <Pressable
@@ -74,6 +83,15 @@ export default function EstablishmentLayout() {
               }}
             >
               <Text style={styles.drawerItem}>📦 Histórico</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
+                router.push("/(establishment)/(settings)/settings");
+              }}
+            >
+              <Text style={styles.drawerItem}>⚙️ Definições</Text>
             </Pressable>
 
             <Pressable onPress={handleLogout}>
@@ -118,7 +136,7 @@ const styles = StyleSheet.create({
 
   /* ✅ OVERLAY */
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0,0,0,0.4)",
     zIndex: 10,
   },

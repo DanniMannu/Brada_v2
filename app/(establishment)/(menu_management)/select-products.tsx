@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 type Product = {
@@ -22,7 +22,19 @@ export default function SelectProducts() {
     id?: string;
   }>();
 
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() => {
+    if (!params.selectedProducts) return [];
+
+    try {
+      const productsSelected = JSON.parse(
+        params.selectedProducts as string,
+      ) as Product[];
+
+      return productsSelected.map((p) => p.id);
+    } catch {
+      return [];
+    }
+  });
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("ALL");
   const [sort, setSort] = useState<"A-Z" | "Z-A">("A-Z");
@@ -30,27 +42,17 @@ export default function SelectProducts() {
   const [showSort, setShowSort] = useState(false);
 
   // ✅ MOCK (substituir por BD depois)
-  const products: Product[] = [
-    { id: "1", name: "Pizza", category: "Pizzas" },
-    { id: "2", name: "Hambúrguer", category: "Burgers" },
-    { id: "3", name: "Coca-Cola", category: "Bebidas" },
-    { id: "4", name: "Sumo", category: "Bebidas" },
-  ];
+  const products: Product[] = useMemo(
+    () => [
+      { id: "1", name: "Pizza", category: "Pizzas" },
+      { id: "2", name: "Hambúrguer", category: "Burgers" },
+      { id: "3", name: "Coca-Cola", category: "Bebidas" },
+      { id: "4", name: "Sumo", category: "Bebidas" },
+    ],
+    [],
+  );
 
-  // ✅ carregar selecionados iniciais
-  useEffect(() => {
-    if (!params.selectedProducts) return;
-
-    try {
-      const productsSelected = JSON.parse(
-        params.selectedProducts as string,
-      ) as Product[];
-
-      setSelected(productsSelected.map((p) => p.id));
-    } catch {
-      setSelected([]);
-    }
-  }, [params.selectedProducts]);
+  // selected initialized from params above
 
   const toggle = (id: string) => {
     setSelected((prev) =>
@@ -80,7 +82,7 @@ export default function SelectProducts() {
     );
 
     return list;
-  }, [search, category, sort]);
+  }, [products, search, category, sort]);
 
   return (
     <View style={styles.container}>

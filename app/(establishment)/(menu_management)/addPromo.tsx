@@ -1,6 +1,6 @@
 import { Product } from "@/components/others/Product";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function AddPromo() {
@@ -9,24 +9,23 @@ export default function AddPromo() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
-  // Receber produtos selecionados
-  useEffect(() => {
-    if (params.selectedProducts) {
-      try {
-        const products = JSON.parse(params.selectedProducts as string);
+  const selectedProducts = useMemo<Product[]>(() => {
+    if (!params.selectedProducts) {
+      return [];
+    }
 
-        setSelectedProducts(Array.isArray(products) ? products : []);
-      } catch (error) {
-        console.error(error);
-        setSelectedProducts([]);
-      }
+    try {
+      const products = JSON.parse(params.selectedProducts as string);
+      return Array.isArray(products) ? products : [];
+    } catch (error) {
+      console.error(error);
+      return [];
     }
   }, [params.selectedProducts]);
 
   const save = () => {
-    if (!name) {
+    if (!name.trim()) {
       alert("Nome obrigatório");
       return;
     }
@@ -36,7 +35,7 @@ export default function AddPromo() {
       return;
     }
 
-    if (!price) {
+    if (!price.trim()) {
       alert("Define o preço");
       return;
     }
@@ -56,7 +55,7 @@ export default function AddPromo() {
       <Text style={styles.title}>Nova Promoção</Text>
 
       <TextInput
-        placeholder="Titulo da promoção"
+        placeholder="Título da promoção"
         style={styles.input}
         value={name}
         onChangeText={setName}
@@ -70,14 +69,13 @@ export default function AddPromo() {
         multiline
       />
 
-      {/* BOTÃO PARA SELECIONAR PRODUTOS */}
       <Pressable
         style={styles.selectBtn}
         onPress={() =>
           router.push({
-            pathname: "/(establishment)/select-products",
+            pathname: "/(establishment)/(menu_management)/select-products",
             params: {
-              returnTo: "/(establishment)/addMenu",
+              returnTo: "/(establishment)/(menu_management)/addPromo",
               selectedProducts: JSON.stringify(selectedProducts),
             },
           })
@@ -107,34 +105,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: "#fff",
   },
+
   title: {
-    fontSize: 18, // ✅ mais pequeno
+    fontSize: 18,
     fontWeight: "600",
     marginBottom: 10,
   },
+
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
     padding: 10,
     borderRadius: 8,
     marginBottom: 10,
-    fontSize: 14, // ✅ reduzido
+    fontSize: 14,
   },
+
   textArea: {
     height: 70,
     textAlignVertical: "top",
   },
+
   selectBtn: {
     backgroundColor: "#f3f4f6",
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
   },
+
   selectText: {
     fontSize: 14,
     fontWeight: "500",
   },
+
   btn: {
     backgroundColor: "#782726",
     padding: 14,
@@ -142,6 +147,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
+
   btnText: {
     color: "#fff",
     fontSize: 14,
