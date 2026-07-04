@@ -97,8 +97,8 @@ export default function SupportEstablishment() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       {step === "select" ? (
         <>
-          <Text style={styles.title}>Precisaste de ajuda?</Text>
-          <Text style={styles.subtitle}>Escolhe o tipo de problema</Text>
+          <Text style={styles.title}>Precisas de ajuda?</Text>
+          <Text style={styles.subtitle}>Seleciona o tipo de problema</Text>
 
           <View style={styles.grid}>
             {REASONS.map((r) => {

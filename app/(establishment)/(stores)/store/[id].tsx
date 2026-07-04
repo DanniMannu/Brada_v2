@@ -3,12 +3,12 @@ import { supabase } from "@/lib/supabase";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 const PRIMARY = "#782726";
@@ -84,15 +84,23 @@ export default function StoreDetails() {
   };
 
   const deleteStore = async () => {
+    console.log("deleteStore chamado 2");
     if (!store) return;
 
+    console.log("deleteStore chamado");
     try {
       setSaving(true);
 
-      const { error } = await supabase
+      console.log("store.id:", store.id);
+
+      const { data, error } = await supabase
         .from("stores")
         .delete()
-        .eq("id", store.id);
+        .eq("id", store.id)
+        .select();
+
+      console.log("DELETE DATA:", data);
+      console.log("DELETE ERROR:", error);
 
       if (error) throw error;
 

@@ -106,22 +106,6 @@ export default function EstablishmentAccount() {
       </View>
 
       {/* STATS */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{profile?.stores || 0}</Text>
-          <Text style={styles.statLabel}>Lojas</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{profile?.minimum_order || 0}€</Text>
-          <Text style={styles.statLabel}>Pedido Mín.</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{profile?.delivery_fee || 0}€</Text>
-          <Text style={styles.statLabel}>Entrega</Text>
-        </View>
-      </View>
 
       {/* INFORMAÇÕES */}
       <View style={styles.card}>

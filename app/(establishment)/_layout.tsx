@@ -52,15 +52,6 @@ export default function EstablishmentLayout() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
-                router.push("/(establishment)/(stores)");
-              }}
-            >
-              <Text style={styles.drawerItem}>🏪 Lojas</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                setMenuOpen(false);
                 router.push("/(establishment)/(menu_management)/menu");
               }}
             >

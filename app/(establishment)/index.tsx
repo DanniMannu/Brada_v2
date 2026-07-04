@@ -50,23 +50,125 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const fetchDataEffect = async () => {
-      await fetchData();
+    let channel: any;
+
+    const loadData = async () => {
+      const currentEstablishmentId = await getEstablishmentId();
+      if (!currentEstablishmentId) return;
+
+      const { data: est } = await supabase
+        .from("establishments")
+        .select("name")
+        .eq("id", currentEstablishmentId)
+        .single();
+
+      setName(est?.name || "");
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          `
+    *,
+    customer:customers!orders_customer_fk (
+      id,
+      full_name,
+      phone
+    ),
+    order_items (
+      id,
+      product_name,
+      quantity,
+      price
+    )
+  `,
+        )
+        .eq("establishment_id", currentEstablishmentId)
+        .order("created_at", { ascending: false });
+
+      console.log("ERROR:", error);
+      console.log("DATA:", JSON.stringify(data, null, 2));
+
+      if (error) {
+        console.log(error);
+        return;
+      }
+
+      setOrders(data || []);
+      setCount(data?.length || 0);
+
+      const total =
+        data?.reduce((acc, order) => acc + Number(order.total || 0), 0) || 0;
+
+      setSales(total);
+
+      channel = supabase
+        .channel(`orders-${currentEstablishmentId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "orders",
+            filter: `establishment_id=eq.${currentEstablishmentId}`,
+          },
+          () => {
+            console.log("Pedido atualizado em realtime");
+            loadData();
+          },
+        )
+        .subscribe();
     };
 
-    void fetchDataEffect();
+    loadData();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, []);
 
   const updateStatus = async (id: string, status: OrderStatus) => {
     await supabase.from("orders").update({ status }).eq("id", id);
-    fetchData();
   };
 
   const renderOrder = ({ item }: { item: Order }) => (
     <View style={styles.orderCard}>
       <Text style={styles.orderTitle}>Pedido #{item.id.slice(0, 5)}</Text>
-      <Text>Cliente: {item.customer_name}</Text>
-      <Text>Total: {item.total} MT</Text>
+
+      <Text>Cliente: {item.customer?.full_name ?? "Cliente desconhecido"}</Text>
+
+      {item.customer?.phone && <Text>Telefone: {item.customer.phone}</Text>}
+
+      <Text
+        style={{
+          marginTop: 10,
+          fontWeight: "700",
+          color: "#782726",
+        }}
+      >
+        Produtos
+      </Text>
+
+      {item.order_items?.length ? (
+        item.order_items.map((product) => (
+          <Text key={product.id} style={{ marginTop: 4 }}>
+            • {product.quantity}x {product.product_name}
+          </Text>
+        ))
+      ) : (
+        <Text style={{ color: "#999", marginTop: 4 }}>Sem produtos</Text>
+      )}
+
+      <Text
+        style={{
+          marginTop: 12,
+          fontWeight: "700",
+          fontSize: 16,
+        }}
+      >
+        Total: {item.total} MT
+      </Text>
 
       <View style={styles.buttons}>
         {item.status === "pending" && (

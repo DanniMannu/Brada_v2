@@ -13,6 +13,12 @@ export default function Settings() {
       route: "/(establishment)/(settings)/account",
     },
     {
+      title: "Estabelecimento",
+      description: "Gere o teu estabelecimento",
+      icon: "time-outline",
+      route: "/(establishment)/(settings)/establishment_settings",
+    },
+    {
       title: "Horário de funcionamento",
       description: "Dias, horários e férias",
       icon: "time-outline",

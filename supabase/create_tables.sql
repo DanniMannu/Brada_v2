@@ -422,6 +422,7 @@ for delete
 to authenticated
 using (true);
 
+
 create policy "Allow read stores"
 on stores
 for select
@@ -503,3 +504,66 @@ create table public.store_schedules (
   created_at timestamp default now(),
   unique(store_id, weekday)
 );
+
+create policy "Allow read orders"
+on orders
+for select
+to authenticated
+using (true);
+
+create policy "Allow read order_items"
+on order_items
+for select
+to authenticated
+using (true);
+
+ALTER TABLE order_items
+ADD CONSTRAINT order_items_order_id_fkey
+FOREIGN KEY (order_id)
+REFERENCES orders(id)
+ON DELETE CASCADE;
+
+ALTER TABLE orders
+ADD CONSTRAINT orders_customer_fk
+FOREIGN KEY (customer_id)
+REFERENCES customers(id);
+
+
+CREATE POLICY "customers_select_own"
+ON customers
+FOR SELECT
+USING (
+  auth.uid() = id
+);
+
+CREATE POLICY customers_select
+ON customers
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY "customers_insert_own"
+ON customers
+FOR INSERT
+WITH CHECK (
+  auth.uid() = id
+);
+
+CREATE POLICY "customers_update_own"
+ON customers
+FOR UPDATE
+USING (
+  auth.uid() = id
+)
+WITH CHECK (
+  auth.uid() = id
+);
+
+CREATE POLICY "customers_delete_own"
+ON customers
+FOR DELETE
+USING (
+  auth.uid() = id
+);
+
+
