@@ -1,12 +1,12 @@
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    FlatList,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -127,12 +127,15 @@ export default function StoresScreen() {
     ]);
   };
 
-  useEffect(() => {
-    (async () => {
-      await loadStores();
-      setLoading(false);
-    })();
-  }, [loadStores]);
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        setLoading(true);
+        await loadStores();
+        setLoading(false);
+      })();
+    }, [loadStores]),
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -149,8 +152,9 @@ export default function StoresScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
+    <FlatList
+      data={stores}
+      keyExtractor={(item) => item.id}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -158,29 +162,34 @@ export default function StoresScreen() {
           tintColor={PRIMARY}
         />
       }
-    >
-      <Text style={styles.title}>A tua Loja</Text>
+      ListHeaderComponent={
+        <>
+          <Text style={styles.title}>A tua Loja</Text>
 
-      {stores.length === 0 ? (
-        <EmptyState router={router} />
-      ) : (
-        stores.map((store) => (
-          <StoreCard
-            key={store.id}
-            store={store}
-            saving={savingId === store.id}
-            onToggle={() => toggleActive(store)}
-            onDelete={() => confirmDelete(store)}
-            router={router}
-          />
-        ))
+          <Text style={styles.subtitle}>
+            Olá Brada, gere a tua loja, os teus horários e disponibilidade.
+          </Text>
+        </>
+      }
+      renderItem={({ item }) => (
+        <StoreCard
+          store={item}
+          saving={savingId === item.id}
+          onToggle={() => toggleActive(item)}
+          router={router}
+        />
       )}
-    </ScrollView>
+      ListEmptyComponent={<EmptyState router={router} />}
+      contentContainerStyle={{
+        padding: 16,
+        paddingBottom: 40,
+      }}
+    />
   );
 }
 
 /* ✅ COMPONENTE CARD */
-function StoreCard({ store, saving, onToggle, onDelete, router }: any) {
+function StoreCard({ store, saving, onToggle, router }: any) {
   const isActive = store.is_active;
 
   return (
@@ -208,66 +217,50 @@ function StoreCard({ store, saving, onToggle, onDelete, router }: any) {
 
       {/* INFO */}
       <View style={styles.infoBlock}>
-        <Text style={styles.label}>Morada</Text>
+        <Text style={styles.label}>📍 Morada</Text>
         <Text style={styles.value}>{store.address}</Text>
       </View>
 
       {store.contact && (
         <View style={styles.infoBlock}>
-          <Text style={styles.label}>Contacto</Text>
+          <Text style={styles.label}>📞 Contacto</Text>
           <Text style={styles.value}>{store.contact}</Text>
         </View>
       )}
 
       {/* ACTIONS */}
-      <View style={styles.actionsGrid}>
-        <View style={styles.actionButton}>
-          <Button
-            title="Editar"
-            variant="secondary"
-            onPress={() =>
-              router.push({
-                pathname: "/(establishment)/(stores)/edit-store",
-                params: { id: store.id },
-              })
-            }
-            style={{ marginTop: 16 }}
-          />
-        </View>
 
-        <View style={styles.actionButton}>
-          <Button
-            title="Horários"
-            variant="primary"
-            onPress={() =>
-              router.push({
-                pathname: "/(establishment)/(stores)/store-schedule/[id]",
-                params: { id: store.id },
-              })
-            }
-            style={{ marginTop: 16 }}
-          />
-        </View>
+      <Button
+        title="Editar"
+        variant="secondary"
+        onPress={() =>
+          router.push({
+            pathname: "/(establishment)/(stores)/edit-store",
+            params: { id: store.id },
+          })
+        }
+        style={{ marginTop: 12 }}
+      />
 
-        <View style={styles.actionButton}>
-          <Button
-            title={isActive ? "Desativar" : "Ativar"}
-            variant="secondary"
-            onPress={onToggle}
-            disabled={saving}
-            style={{ marginTop: 16 }}
-          />
-        </View>
+      <Button
+        title="Horários"
+        variant="primary"
+        onPress={() =>
+          router.push({
+            pathname: "/(establishment)/(stores)/store-schedule/[id]",
+            params: { id: store.id },
+          })
+        }
+        style={{ marginTop: 12 }}
+      />
 
-        <View style={styles.actionButton}>
-          <Button
-            title="Eliminar"
-            variant="secondary"
-            onPress={onDelete}
-            style={{ marginTop: 16 }}
-          />
-        </View>
-      </View>
+      <Button
+        title={isActive ? "Desativar Loja" : "Ativar Loja"}
+        variant="secondary"
+        onPress={onToggle}
+        disabled={saving}
+        style={{ marginTop: 12 }}
+      />
     </View>
   );
 }
@@ -385,16 +378,8 @@ const styles = StyleSheet.create({
   },
 
   // ✅ ACTIONS (grid tipo Glovo)
-  actionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
-
-  actionButton: {
-    width: "48%",
-    marginTop: 10,
+  actionsColumn: {
+    marginTop: 18,
   },
 
   // ✅ EMPTY
@@ -420,5 +405,43 @@ const styles = StyleSheet.create({
     color: "#64748B",
     textAlign: "center",
     marginBottom: 16,
+  },
+  subtitle: {
+    color: "#64748B",
+    fontSize: 15,
+    marginBottom: 18,
+  },
+
+  summaryCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    flexDirection: "row",
+    justifyContent: "space-evenly",
+    alignItems: "center",
+    paddingVertical: 18,
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  summaryItem: {
+    alignItems: "center",
+  },
+
+  summaryNumber: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: PRIMARY,
+  },
+
+  summaryLabel: {
+    color: "#64748B",
+    marginTop: 4,
+  },
+
+  summaryDivider: {
+    width: 1,
+    height: 42,
+    backgroundColor: "#E5E7EB",
   },
 });
