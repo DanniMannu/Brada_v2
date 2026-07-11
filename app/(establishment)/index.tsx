@@ -1,5 +1,4 @@
 import Button from "@/components/ui/Button";
-
 import { getEstablishmentId } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
 import { Order, OrderStatus } from "@/types";
@@ -23,11 +22,27 @@ export default function Home() {
 
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 768;
+
   const router = useRouter();
+
+  const autoCancelExpiredOrders = async () => {
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+
+    await supabase
+      .from("orders")
+      .update({
+        status: "cancelled",
+      })
+      .eq("status", "pending")
+      .lt("created_at", oneMinuteAgo);
+  };
 
   const fetchData = async () => {
     const currentEstablishmentId = await getEstablishmentId();
+
     if (!currentEstablishmentId) return;
+
+    await autoCancelExpiredOrders();
 
     const { data: est } = await supabase
       .from("establishments")
@@ -37,69 +52,55 @@ export default function Home() {
 
     setName(est?.name || "");
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("orders")
-      .select("*")
-      .eq("establishment_id", currentEstablishmentId);
+      .select(
+        `
+        *,
+        customer:customers (
+          id,
+          full_name,
+          phone
+        ),
+        order_items (
+          id,
+          product_name,
+          quantity,
+          price
+        )
+      `,
+      )
+      .eq("establishment_id", currentEstablishmentId)
+      .eq("status", "pending")
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
 
     setOrders(data || []);
     setCount(data?.length || 0);
 
-    const total = data?.reduce((acc, o) => acc + Number(o.total), 0) || 0;
+    const total =
+      data?.reduce((acc, order) => acc + Number(order.total || 0), 0) || 0;
+
     setSales(total);
+
+    console.log("DATA:", data);
   };
 
   useEffect(() => {
     let channel: any;
 
-    const loadData = async () => {
+    const initialize = async () => {
       const currentEstablishmentId = await getEstablishmentId();
+
       if (!currentEstablishmentId) return;
 
-      const { data: est } = await supabase
-        .from("establishments")
-        .select("name")
-        .eq("id", currentEstablishmentId)
-        .single();
-
-      setName(est?.name || "");
-
-      const { data, error } = await supabase
-        .from("orders")
-        .select(
-          `
-    *,
-    customer:customers!orders_customer_fk (
-      id,
-      full_name,
-      phone
-    ),
-    order_items (
-      id,
-      product_name,
-      quantity,
-      price
-    )
-  `,
-        )
-        .eq("establishment_id", currentEstablishmentId)
-        .order("created_at", { ascending: false });
-
-      console.log("ERROR:", error);
-      console.log("DATA:", JSON.stringify(data, null, 2));
-
-      if (error) {
-        console.log(error);
-        return;
-      }
-
-      setOrders(data || []);
-      setCount(data?.length || 0);
-
-      const total =
-        data?.reduce((acc, order) => acc + Number(order.total || 0), 0) || 0;
-
-      setSales(total);
+      await fetchData();
 
       channel = supabase
         .channel(`orders-${currentEstablishmentId}`)
@@ -111,17 +112,22 @@ export default function Home() {
             table: "orders",
             filter: `establishment_id=eq.${currentEstablishmentId}`,
           },
-          () => {
-            console.log("Pedido atualizado em realtime");
-            loadData();
+          async () => {
+            await fetchData();
           },
         )
         .subscribe();
     };
 
-    loadData();
+    initialize();
+
+    const interval = setInterval(() => {
+      fetchData();
+    }, 10000);
 
     return () => {
+      clearInterval(interval);
+
       if (channel) {
         supabase.removeChannel(channel);
       }
@@ -129,16 +135,26 @@ export default function Home() {
   }, []);
 
   const updateStatus = async (id: string, status: OrderStatus) => {
-    await supabase.from("orders").update({ status }).eq("id", id);
+    const { error } = await supabase
+      .from("orders")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    await fetchData();
   };
 
-  const renderOrder = ({ item }: { item: Order }) => (
+  const renderOrder = ({ item }: { item: any }) => (
     <View style={styles.orderCard}>
       <Text style={styles.orderTitle}>Pedido #{item.id.slice(0, 5)}</Text>
 
-      <Text>Cliente: {item.customer?.full_name ?? "Cliente desconhecido"}</Text>
+      <Text>Cliente: {item.customer?.full_name || "Cliente desconhecido"}</Text>
 
-      {item.customer?.phone && <Text>Telefone: {item.customer.phone}</Text>}
+      {!!item.customer?.phone && <Text>Telefone: {item.customer.phone}</Text>}
 
       <Text
         style={{
@@ -151,13 +167,20 @@ export default function Home() {
       </Text>
 
       {item.order_items?.length ? (
-        item.order_items.map((product) => (
+        item.order_items.map((product: any) => (
           <Text key={product.id} style={{ marginTop: 4 }}>
             • {product.quantity}x {product.product_name}
           </Text>
         ))
       ) : (
-        <Text style={{ color: "#999", marginTop: 4 }}>Sem produtos</Text>
+        <Text
+          style={{
+            color: "#999",
+            marginTop: 4,
+          }}
+        >
+          Sem produtos
+        </Text>
       )}
 
       <Text
@@ -171,23 +194,30 @@ export default function Home() {
       </Text>
 
       <View style={styles.buttons}>
-        {item.status === "pending" && (
-          <>
-            <Pressable
-              style={styles.btn}
-              onPress={() => updateStatus(item.id, "accepted")}
-            >
-              <Text style={styles.btnText}>Aceitar</Text>
-            </Pressable>
+        <Pressable
+          style={styles.btn}
+          onPress={async () => {
+            await updateStatus(item.id, "accepted");
 
-            <Pressable
-              style={[styles.btn, styles.gray]}
-              onPress={() => updateStatus(item.id, "rejected")}
-            >
-              <Text>Rejeitar</Text>
-            </Pressable>
-          </>
-        )}
+            router.push({
+              pathname: "./(establishment)/(menu-management)/order-details",
+              params: {
+                orderId: item.id,
+              },
+            });
+          }}
+        >
+          <Text style={styles.btnText}>Aceitar</Text>
+        </Pressable>
+
+        <Pressable
+          style={[styles.btn, styles.gray]}
+          onPress={async () => {
+            await updateStatus(item.id, "rejected");
+          }}
+        >
+          <Text>Rejeitar</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -203,7 +233,9 @@ export default function Home() {
             <View
               style={[
                 styles.cards,
-                { flexDirection: isLargeScreen ? "row" : "column" },
+                {
+                  flexDirection: isLargeScreen ? "row" : "column",
+                },
               ]}
             >
               <View style={styles.card}>
@@ -213,7 +245,7 @@ export default function Home() {
 
               <View style={styles.card}>
                 <Text style={styles.big}>{count}</Text>
-                <Text>Pedidos Hoje</Text>
+                <Text>Novos Pedidos</Text>
               </View>
             </View>
 
@@ -228,7 +260,6 @@ export default function Home() {
         }
       />
 
-      {/* BOTÃO FIXO SEM SOBREPOSIÇÃO */}
       <View style={styles.floatingWrapper}>
         <Button
           title="Fala com o teu Brada"
@@ -245,24 +276,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F5F5F5",
   },
-
   scrollContent: {
     padding: 16,
     paddingBottom: 120,
     width: "100%",
   },
-
   greeting: {
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 20,
   },
-
   cards: {
     gap: 12,
     marginBottom: 10,
   },
-
   card: {
     flex: 1,
     backgroundColor: "#fff",
@@ -270,58 +297,49 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
   },
-
   big: {
     fontSize: 22,
     fontWeight: "700",
   },
-
   section: {
     marginTop: 20,
     fontWeight: "700",
     fontSize: 19,
   },
-
   empty: {
     textAlign: "center",
     marginTop: 20,
   },
-
   orderCard: {
     backgroundColor: "#fff",
     padding: 14,
     borderRadius: 12,
     marginTop: 10,
   },
-
   orderTitle: {
     fontWeight: "700",
+    marginBottom: 6,
   },
-
   buttons: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 10,
+    marginTop: 12,
   },
-
   btn: {
     backgroundColor: "#782726",
     padding: 10,
     borderRadius: 8,
   },
-
   gray: {
     backgroundColor: "#ccc",
   },
-
   btnText: {
     color: "#fff",
   },
-
   floatingWrapper: {
     position: "absolute",
     bottom: 20,
-    right: 20,
     left: 20,
+    right: 20,
   },
 });

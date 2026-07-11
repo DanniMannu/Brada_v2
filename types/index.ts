@@ -3,8 +3,9 @@ export type OrderStatus =
   | "accepted"
   | "preparing"
   | "ready"
-  | "assigned"
-  | "rejected";
+  | "completed"
+  | "rejected"
+  | "cancelled";
 
 export type OrderItem = {
   id: string;
@@ -22,7 +23,6 @@ export type Order = {
   customer: {
     id: string;
     full_name: string;
-    phone: string | null;
   };
 
   order_items: {
