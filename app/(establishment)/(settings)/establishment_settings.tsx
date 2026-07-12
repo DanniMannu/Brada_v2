@@ -85,48 +85,6 @@ export default function StoresScreen() {
     }
   };
 
-  // ✅ DELETE STORE
-  const deleteStore = async (store: Store) => {
-    try {
-      setSavingId(store.id);
-
-      console.log("store.id :", store.id);
-
-      const { data, error } = await supabase
-        .from("stores")
-        .delete()
-        .eq("id", store.id)
-        .select();
-
-      console.log("DELETE DATA:", data);
-      console.log("DELETE ERROR:", error);
-
-      if (error) {
-        console.log(error);
-        Alert.alert("Erro", error.message);
-      }
-
-      setStores((prev) => prev.filter((s) => s.id !== store.id));
-
-      Alert.alert("Sucesso", "Loja eliminada.");
-    } catch (error) {
-      Alert.alert("Erro", "Não foi possível eliminar." + error);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const confirmDelete = (store: Store) => {
-    Alert.alert("Eliminar Loja", "Esta ação não pode ser revertida.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: () => deleteStore(store),
-      },
-    ]);
-  };
-
   useFocusEffect(
     useCallback(() => {
       (async () => {
