@@ -32,6 +32,21 @@ type Promotion = {
   }[];
 };
 
+type MenuProduct = {
+  product_id: string;
+  quantity?: number;
+  product?: { id: string; name: string; price?: number | null } | null;
+};
+
+type Menu = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | null;
+  active?: boolean;
+  menu_products: MenuProduct[];
+};
+
 export default function RestaurantMenu() {
   const [tab, setTab] = useState<"menu" | "categories" | "products" | "promo">(
     "menu",
@@ -39,7 +54,7 @@ export default function RestaurantMenu() {
   const [sortAZ, setSortAZ] = useState(true);
   const [showFilter, setShowFilter] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
-  const [menus, setMenus] = useState<any[]>([]);
+  const [menus, setMenus] = useState<Menu[]>([]);
   const [promos, setPromos] = useState<Promotion[]>([]);
 
   useEffect(() => {
@@ -61,7 +76,9 @@ export default function RestaurantMenu() {
             `
           *,
           menu_products (
-            product_id
+            product_id,
+            quantity,
+            product:products (id, name, price)
           )
         `,
           )
@@ -191,8 +208,18 @@ export default function RestaurantMenu() {
             keyExtractor={(i) => i.id}
             renderItem={({ item }) => (
               <View style={styles.card}>
-                <Text style={styles.title}>{item.name}</Text>
-                <Text>{item.menu_products.length} produtos</Text>
+                <View style={styles.menuHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.title}>{item.name}</Text>
+                    <Text style={styles.menuDescription}>
+                      {item.menu_products?.length
+                        ? item.menu_products.map((line: MenuProduct) => `${line.quantity || 1}× ${line.product?.name || "Produto"}`).join(" · ")
+                        : "Sem produtos selecionados"}
+                    </Text>
+                  </View>
+                  <Text style={styles.menuPrice}>{Number(item.price || 0).toFixed(2)} MT</Text>
+                </View>
+                <Text style={styles.productCount}>{item.menu_products?.length || 0} produtos</Text>
 
                 <View style={styles.row}>
                   <Pressable
@@ -446,6 +473,11 @@ const styles = StyleSheet.create({
   },
 
   title: { fontWeight: "700", fontSize: 16 },
+
+  menuHeader: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
+  menuDescription: { color: "#6B7280", marginTop: 7, lineHeight: 20 },
+  menuPrice: { color: PRIMARY, fontSize: 17, fontWeight: "800" },
+  productCount: { color: "#8A7D7C", fontSize: 12, marginTop: 10 },
 
   row: { flexDirection: "row", marginTop: 10, gap: 20 },
 

@@ -52,6 +52,15 @@ export default function EstablishmentLayout() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
+                router.push("/(establishment)/active-orders");
+              }}
+            >
+              <Text style={styles.drawerItem}>📋 Pedidos em curso</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
                 router.push("/(establishment)/(menu_management)/menu");
               }}
             >

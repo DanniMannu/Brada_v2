@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -72,21 +73,22 @@ export default function ResetPassword() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        Alert.alert("Erro", error.message);
+        return;
+      }
 
-    if (error) {
-      Alert.alert("Erro", error.message);
-      return;
+      Alert.alert("Sucesso", "Password atualizada.", [
+        { text: "OK", onPress: () => router.replace("/login") },
+      ]);
+    } catch {
+      Alert.alert("Erro", "Não foi possível atualizar a password.");
+    } finally {
+      setSubmitting(false);
     }
-
-    Alert.alert("Sucesso", "Password atualizada.", [
-      {
-        text: "OK",
-        onPress: () => router.replace("/login"),
-      },
-    ]);
   };
 
   if (loading) {
@@ -115,8 +117,16 @@ export default function ResetPassword() {
             style={styles.input}
           />
 
-          <Pressable style={styles.button} onPress={submit}>
-            <Text style={styles.buttonText}>Atualizar password</Text>
+          <Pressable
+            style={[styles.button, submitting && styles.buttonDisabled]}
+            onPress={submit}
+            disabled={submitting}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: submitting }}
+          >
+            <Text style={styles.buttonText}>
+              {submitting ? "A atualizar..." : "Atualizar password"}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -158,11 +168,13 @@ const styles = StyleSheet.create({
   },
 
   button: {
-    backgroundColor: "#111",
+    backgroundColor: "#782726",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
   },
+
+  buttonDisabled: { opacity: 0.55 },
 
   buttonText: {
     color: "#fff",

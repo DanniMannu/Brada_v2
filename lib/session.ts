@@ -1,18 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const KEY = "establishment_id";
+// Mantém a chave já usada em produção para não invalidar sessões existentes.
+const ESTABLISHMENT_ID_KEY = "establishment_id";
 
-// ✅ guardar ID
-export const setEstablishmentId = async (id: string) => {
-  await AsyncStorage.setItem(KEY, id);
-};
+export async function setEstablishmentId(id: string): Promise<void> {
+  await AsyncStorage.setItem(ESTABLISHMENT_ID_KEY, id);
+}
 
-// ✅ obter ID
-export const getEstablishmentId = async () => {
-  return await AsyncStorage.getItem(KEY);
-};
+export function getEstablishmentId(): Promise<string | null> {
+  return AsyncStorage.getItem(ESTABLISHMENT_ID_KEY);
+}
 
-// ✅ remover (logout)
-export const clearEstablishmentId = async () => {
-  await AsyncStorage.removeItem(KEY);
-};
+export async function clearEstablishmentId(): Promise<void> {
+  await AsyncStorage.removeItem(ESTABLISHMENT_ID_KEY);
+}

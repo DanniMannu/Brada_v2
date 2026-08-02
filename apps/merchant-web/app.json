@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Brada Estabelecimento",
+    "slug": "brada-merchant",
+    "scheme": "brada-merchant",
+    "platforms": ["web"],
+    "web": {
+      "output": "static"
+    },
+    "plugins": ["expo-router"]
+  }
+}

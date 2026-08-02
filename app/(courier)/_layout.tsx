@@ -6,7 +6,7 @@ export default function EntregadorLayout() {
       <Drawer.Screen name="index" options={{ title: "Ínicio" }} />
       <Drawer.Screen name="earnings" options={{ title: "Ganhos" }} />
       <Drawer.Screen name="history" options={{ title: "Histórico" }} />
-      <Drawer.Screen name="settings/index" options={{ title: "Conta" }} />
+      <Drawer.Screen name="(settings)/index" options={{ title: "Conta" }} />
       <Drawer.Screen name="help" options={{ title: "Ajuda e Suporte" }} />
       <Drawer.Screen name="logout" options={{ title: "Terminar Sessão" }} />
       <Drawer.Screen
@@ -17,7 +17,7 @@ export default function EntregadorLayout() {
         }}
       />
       <Drawer.Screen
-        name="settings/payments"
+        name="(settings)/payments"
         options={{ title: "Pagamentos", drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen
@@ -25,11 +25,11 @@ export default function EntregadorLayout() {
         options={{ title: "Pedidos", drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen
-        name="settings/security"
+        name="(settings)/security"
         options={{ title: "Segurança", drawerItemStyle: { display: "none" } }}
       />
       <Drawer.Screen
-        name="settings/notifications"
+        name="(settings)/notifications"
         options={{ title: "Notificação", drawerItemStyle: { display: "none" } }}
       />
 

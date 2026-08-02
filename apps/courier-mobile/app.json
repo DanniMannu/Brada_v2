@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Brada Estafeta",
+    "slug": "brada-courier",
+    "scheme": "brada-courier",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"]
+  }
+}

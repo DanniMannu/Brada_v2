@@ -1,44 +1,35 @@
 import { supabase } from "./supabase";
 
-/**
- * Upload de licença para Supabase Storage (React Native compatível)
- */
+type LicenseFile = {
+  uri: string;
+  name: string;
+  mimeType?: string | null;
+};
+
+/** Faz upload de uma licença no bucket privado/público configurado no Supabase. */
 export async function uploadLicense(
   registrationId: string,
-  file: {
-    uri: string;
-    name: string;
-    mimeType?: string;
-  },
+  file: LicenseFile,
   type: "operating" | "sanitary",
 ) {
-  const fileExt = file.name.split(".").pop();
-  const filePath = `${registrationId}/${type}.${fileExt}`;
+  const extension = file.name.split(".").pop()?.toLowerCase() || "pdf";
+  const path = `${registrationId}/${type}.${extension}`;
+  const body = new FormData();
 
-  // ✅ React Native: usar FormData
-  const formData = new FormData();
-  formData.append("file", {
+  // O FormData do React Native aceita este formato; o tipo DOM não o declara.
+  body.append("file", {
     uri: file.uri,
-    name: filePath,
+    name: path,
     type: file.mimeType || "application/pdf",
-  } as any);
+  } as unknown as Blob);
 
-  const { error } = await supabase.storage
-    .from("licenses")
-    .upload(filePath, formData, {
-      upsert: true,
-      contentType: file.mimeType || "application/pdf",
-    });
+  const { error } = await supabase.storage.from("licenses").upload(path, body, {
+    upsert: true,
+    contentType: file.mimeType || "application/pdf",
+  });
 
-  if (error) {
-    console.error("❌ Erro no upload da licença:", error);
-    throw error;
-  }
+  if (error) throw error;
 
-  const { data } = supabase.storage.from("licenses").getPublicUrl(filePath);
-
-  return {
-    fileName: file.name,
-    fileUrl: data.publicUrl,
-  };
+  const { data } = supabase.storage.from("licenses").getPublicUrl(path);
+  return { fileName: file.name, fileUrl: data.publicUrl };
 }

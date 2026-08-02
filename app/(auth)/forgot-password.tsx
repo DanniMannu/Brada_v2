@@ -18,28 +18,24 @@ export default function ForgotPassword() {
     }
 
     setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: "brada://reset-password",
+      });
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: "Brada://reset-password",
-    });
+      if (error) {
+        Alert.alert("Erro", error.message);
+        return;
+      }
 
-    setLoading(false);
-
-    if (error) {
-      Alert.alert("Erro", error.message);
-      return;
+      Alert.alert("Email enviado", "Verifica o teu email para redefinir a password.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch {
+      Alert.alert("Erro", "Não foi possível enviar o email. Tenta novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    Alert.alert(
-      "Email enviado",
-      "Verifica o teu email para redefinir a password.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.back(),
-        },
-      ],
-    );
   };
 
   return (

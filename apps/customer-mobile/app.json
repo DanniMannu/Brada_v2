@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Brada",
+    "slug": "brada-customer",
+    "scheme": "brada-customer",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"]
+  }
+}

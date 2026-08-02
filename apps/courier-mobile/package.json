@@ -1,0 +1,19 @@
+{
+  "name": "@brada/courier-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@brada/shared": "*",
+    "expo": "~57.0.0",
+    "expo-router": "~57.0.7",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  }
+}

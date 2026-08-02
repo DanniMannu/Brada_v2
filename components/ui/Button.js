@@ -14,12 +14,14 @@ export default function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.button,
         {
           backgroundColor: v.backgroundColor,
           borderColor: v.borderColor,
-          opacity: pressed ? 0.85 : 1,
+          opacity: disabled ? 0.55 : pressed ? 0.85 : 1,
         },
         style,
       ]}

@@ -2,6 +2,8 @@ import { supabase } from "@/lib/supabase";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+  Alert,
+  ScrollView,
   Pressable,
   StyleSheet,
   Switch,
@@ -16,6 +18,8 @@ type Product = {
   id: string;
   name: string;
   category?: string;
+  price?: number | null;
+  quantity?: number;
 };
 
 export default function EditMenu() {
@@ -59,8 +63,10 @@ export default function EditMenu() {
         setPrice(data.price ? String(data.price) : "");
         setActive(data.active ?? true);
 
-        const products =
-          data.menu_products?.map((item: any) => item.product) || [];
+        const products = data.menu_products?.map((item: any) => ({
+          ...item.product,
+          quantity: Number(item.quantity || 1),
+        })) || [];
 
         setSelectedProducts(products);
       } catch (err) {
@@ -123,6 +129,7 @@ export default function EditMenu() {
         const rows = selectedProducts.map((product) => ({
           menu_id: id,
           product_id: product.id,
+          quantity: product.quantity || 1,
         }));
 
         const { error: relationError } = await supabase
@@ -152,9 +159,16 @@ export default function EditMenu() {
     }
   };
 
+  const changeQuantity = (productId: string, amount: number) => {
+    setSelectedProducts((current) => current.map((product) => product.id === productId
+      ? { ...product, quantity: Math.max(1, (product.quantity || 1) + amount) }
+      : product));
+  };
+
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Editar Menu</Text>
+      <Text style={styles.subtitle}>Atualiza os dados e os produtos que fazem parte deste menu.</Text>
 
       <TextInput
         style={styles.input}
@@ -185,7 +199,8 @@ export default function EditMenu() {
         <Switch
           value={active}
           onValueChange={setActive}
-          trackColor={{ true: PRIMARY }}
+          trackColor={{ false: "#D6C9C8", true: "#f2130f" }}
+          thumbColor="#FFFFFF"
         />
       </View>
 
@@ -199,7 +214,13 @@ export default function EditMenu() {
         <View style={styles.selectedList}>
           {selectedProducts.map((product) => (
             <View key={product.id} style={styles.selectedItem}>
-              <Text>{product.name}</Text>
+              <View style={{ flex: 1 }}><Text style={styles.selectedName}>{product.name}</Text><Text style={styles.selectedPrice}>{Number(product.price || 0).toFixed(2)} MT</Text></View>
+              <View style={styles.quantityControls}>
+                <Pressable style={styles.quantityButton} onPress={() => changeQuantity(product.id, -1)}><Text>−</Text></Pressable>
+                <Text style={styles.quantityValue}>{product.quantity || 1}</Text>
+                <Pressable style={styles.quantityButton} onPress={() => changeQuantity(product.id, 1)}><Text>+</Text></Pressable>
+                <Pressable onPress={() => setSelectedProducts((current) => current.filter((item) => item.id !== product.id))}><Text style={styles.removeProduct}>Remover</Text></Pressable>
+              </View>
             </View>
           ))}
         </View>
@@ -209,17 +230,20 @@ export default function EditMenu() {
         <Text style={styles.primaryBtnText}>Guardar</Text>
       </Pressable>
 
-      <Pressable style={styles.deleteBtn} onPress={removeMenu}>
+      <Pressable style={styles.deleteBtn} onPress={() => Alert.alert("Remover menu", "Esta ação não pode ser revertida.", [{ text: "Cancelar", style: "cancel" }, { text: "Remover", style: "destructive", onPress: removeMenu }])}>
         <Text style={styles.deleteText}>Remover Menu</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 24,
+    paddingBottom: 48,
+    flexGrow: 1,
+    backgroundColor: "#F7F5F4",
   },
 
   title: {
@@ -227,6 +251,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 15,
   },
+  subtitle: { color: "#756B6A", marginBottom: 18, lineHeight: 20 },
 
   input: {
     borderWidth: 1,
@@ -260,11 +285,21 @@ const styles = StyleSheet.create({
   },
 
   selectedItem: {
-    backgroundColor: "#f5dcdc",
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E8D8D6",
+    flexDirection: "row",
+    alignItems: "center",
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 6,
   },
+  selectedName: { fontWeight: "700", color: "#261D1D" },
+  selectedPrice: { color: "#756B6A", fontSize: 12, marginTop: 3 },
+  quantityControls: { flexDirection: "row", alignItems: "center", gap: 7 },
+  quantityButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#F2E6E5", alignItems: "center", justifyContent: "center" },
+  quantityValue: { minWidth: 16, textAlign: "center", fontWeight: "800" },
+  removeProduct: { color: "#f2130f", fontSize: 12, fontWeight: "700", marginLeft: 5 },
 
   primaryBtn: {
     backgroundColor: PRIMARY,

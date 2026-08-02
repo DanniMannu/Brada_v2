@@ -74,7 +74,7 @@ export default function History() {
         return "#16a34a";
 
       case "cancelled":
-        return "#f59e0b";
+        return "#f2130f";
 
       case "rejected":
         return "#dc2626";
@@ -420,8 +420,8 @@ const styles = StyleSheet.create({
   },
 
   filterSelected: {
-    backgroundColor: "#16a34a",
-    borderColor: "#16a34a",
+    backgroundColor: "#b47b7a",
+    borderColor: "#b47b7a",
   },
 
   productsList: {
