@@ -1,251 +1,539 @@
 import Button from "@/components/ui/Button";
 import { InfoBox } from "@/components/ui/InfoBox";
+import { useAuth } from "@/context/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
-import { AsYouType, parsePhoneNumberFromString } from "libphonenumber-js";
-import React, { useState } from "react";
 import {
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  AsYouType,
+  parsePhoneNumberFromString,
+} from "libphonenumber-js";
+import React, { useState } from "react";
+
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RegisterClientScreen() {
+  const { register } = useAuth();
+
   // Dados pessoais
-  const [name, setName] = useState("");
-  const [birthDate, setBirthDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [name, setName] =
+    useState("");
+
+  const [
+    birthDate,
+    setBirthDate,
+  ] = useState<Date | null>(
+    null
+  );
+
+  const [
+    showDatePicker,
+    setShowDatePicker,
+  ] = useState(false);
 
   // Contactos
-  const [phone, setPhone] = useState("");
-  const [phoneE164, setPhoneE164] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] =
+    useState("");
 
-  // Credenciais
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [
+    phoneE164,
+    setPhoneE164,
+  ] = useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  // Password
+  const [
+    password,
+    setPassword,
+  ] = useState("");
+
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] = useState("");
 
   // Termos
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [
+    acceptedTerms,
+    setAcceptedTerms,
+  ] = useState(false);
 
-  // Date picker handler
-  const onChangeDate = (event: any, selectedDate?: Date) => {
+  const [loading, setLoading] =
+    useState(false);
+
+  const onChangeDate = (
+    event: any,
+    selectedDate?: Date
+  ) => {
     setShowDatePicker(false);
-    if (selectedDate) setBirthDate(selectedDate);
+
+    if (selectedDate) {
+      setBirthDate(selectedDate);
+    }
   };
 
-  const handleSubmit = async () => {
-    if (!name || !phone || !password || !confirmPassword) {
-      alert("Preenche os campos obrigatórios");
-      return;
-    }
+  const handleSubmit =
+    async () => {
+      try {
+        setLoading(true);
 
-    if (password !== confirmPassword) {
-      alert("As passwords não coincidem");
-      return;
-    }
+        if (
+          !name.trim() ||
+          !email.trim() ||
+          !phoneE164 ||
+          !password ||
+          !confirmPassword
+        ) {
+          Alert.alert(
+            "Erro",
+            "Preenche todos os campos obrigatórios."
+          );
 
-    if (!acceptedTerms) {
-      alert("Tens de aceitar os Termos e Condições");
-      return;
-    }
+          return;
+        }
 
-    // Aqui já tens:
-    // phoneE164 → +258841234567 (pronto para backend)
+        if (
+          password !==
+          confirmPassword
+        ) {
+          Alert.alert(
+            "Erro",
+            "As passwords não coincidem."
+          );
 
-    router.replace("/(auth)/register-client");
-  };
+          return;
+        }
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Criar conta de Cliente</Text>
+        if (
+          password.length < 6
+        ) {
+          Alert.alert(
+            "Erro",
+            "A password deve ter pelo menos 6 caracteres."
+          );
+
+          return;
+        }
+
+        if (!acceptedTerms) {
+          Alert.alert(
+            "Erro",
+            "Deves aceitar os Termos e Condições."
+          );
+
+          return;
+        }
+
+        console.log({
+            name,
+            email,
+            phoneE164,
+            password
+        });
+
+        const success =
+          await register({
+            name: name.trim(),
+            email: email
+              .trim()
+              .toLowerCase(),
+            password,
+            phone: phoneE164,
+            birthDate,
+          });
+
+        if (!success) {
+          Alert.alert(
+            "Erro",
+            "Não foi possível criar a conta."
+          );
+
+          return;
+        }
+
+        Alert.alert(
+          "Conta criada",
+          "Bem-vindo à Brada!"
+        );
+
+        router.replace(
+          "/tabs/home"
+        );
+      } catch (error) {
+        console.log(error);
+
+        Alert.alert(
+          "Erro",
+          "Ocorreu um erro inesperado."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  return (    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        contentContainerStyle={
+          styles.container
+        }
+        showsVerticalScrollIndicator={
+          false
+        }
+      >
+        <Text style={styles.logo}>
+          Brada.
+        </Text>
+
+        <Text style={styles.title}>
+          Criar conta de Cliente
+        </Text>
 
         <InfoBox
           type="info"
           message="Preenche os teus dados para criares a tua conta."
         />
 
-        {/* 1. Dados pessoais */}
-        <Text style={styles.section}>Dados Pessoais</Text>
+        {/* Dados pessoais */}
+
+        <Text style={styles.section}>
+          Dados Pessoais
+        </Text>
 
         <TextInput
           placeholder="Nome completo *"
           value={name}
           onChangeText={setName}
           style={styles.input}
+          placeholderTextColor="#9CA3AF"
         />
 
-        {/* DATE PICKER FIX */}
         <Pressable
-          onPress={() => setTimeout(() => setShowDatePicker(true), 50)}
           style={styles.dateBox}
+          onPress={() =>
+            setShowDatePicker(true)
+          }
         >
-          <Text style={styles.dateText}>
+          <Text
+            style={[
+              styles.dateText,
+              !birthDate && {
+                color: "#9CA3AF",
+              },
+            ]}
+          >
             {birthDate
-              ? birthDate.toLocaleDateString("pt-PT")
+              ? birthDate.toLocaleDateString(
+                  "pt-PT"
+                )
               : "Data de nascimento (opcional)"}
           </Text>
         </Pressable>
 
         {showDatePicker && (
           <DateTimePicker
-            value={birthDate ?? new Date(2000, 0, 1)}
+            value={
+              birthDate ??
+              new Date(
+                2000,
+                0,
+                1
+              )
+            }
             mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "calendar"}
-            maximumDate={new Date()}
-            onChange={onChangeDate}
+            display={
+              Platform.OS ===
+              "ios"
+                ? "spinner"
+                : "calendar"
+            }
+            maximumDate={
+              new Date()
+            }
+            onChange={
+              onChangeDate
+            }
           />
         )}
 
-        {/* 2. Contactos */}
-        <Text style={styles.section}>Contactos</Text>
+        {/* Contactos */}
+
+        <Text style={styles.section}>
+          Contactos
+        </Text>
 
         <TextInput
           placeholder="84 123 4567"
           value={phone}
-          onChangeText={(text) => {
-            let cleaned = text.replace(/\D/g, "").slice(0, 9);
+          keyboardType="numeric"
+          style={styles.input}
+          placeholderTextColor="#9CA3AF"
+          onChangeText={(
+            text
+          ) => {
+            let cleaned =
+              text
+                .replace(
+                  /\D/g,
+                  ""
+                )
+                .slice(0, 9);
 
-            const validPrefixes = ["82", "83", "84", "85", "86", "87"];
+            const validPrefixes =
+              [
+                "82",
+                "83",
+                "84",
+                "85",
+                "86",
+                "87",
+              ];
+
             if (
-              cleaned.length >= 2 &&
-              !validPrefixes.includes(cleaned.slice(0, 2))
+              cleaned.length >=
+                2 &&
+              !validPrefixes.includes(
+                cleaned.slice(
+                  0,
+                  2
+                )
+              )
             ) {
-              setPhone(cleaned);
+              setPhone(
+                cleaned
+              );
               return;
             }
 
-            const formatted = new AsYouType("MZ").input(cleaned);
-            setPhone(formatted);
+            const formatted =
+              new AsYouType(
+                "MZ"
+              ).input(
+                cleaned
+              );
 
-            const parsed = parsePhoneNumberFromString("+258" + cleaned, "MZ");
-            if (parsed?.isValid()) {
-              setPhoneE164(parsed.number);
+            setPhone(
+              formatted
+            );
+
+            const parsed =
+              parsePhoneNumberFromString(
+                "+258" +
+                  cleaned,
+                "MZ"
+              );
+
+            if (
+              parsed?.isValid()
+            ) {
+              setPhoneE164(
+                parsed.number
+              );
             }
           }}
-          style={styles.input}
-          keyboardType="numeric"
         />
 
         <TextInput
-          placeholder="Email (opcional)"
+          placeholder="Email *"
           value={email}
-          onChangeText={setEmail}
-          style={styles.input}
+          onChangeText={
+            setEmail
+          }
           keyboardType="email-address"
+          autoCapitalize="none"
+          style={styles.input}
+          placeholderTextColor="#9CA3AF"
         />
 
-        {/* 3. Credenciais */}
-        <Text style={styles.section}>Credenciais</Text>
+        {/* Password */}
+
+        <Text style={styles.section}>
+          Credenciais
+        </Text>
 
         <TextInput
           placeholder="Password *"
           value={password}
-          onChangeText={setPassword}
-          style={styles.input}
+          onChangeText={
+            setPassword
+          }
           secureTextEntry
+          style={styles.input}
+          placeholderTextColor="#9CA3AF"
         />
 
         <TextInput
           placeholder="Confirmar password *"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          style={styles.input}
+          value={
+            confirmPassword
+          }
+          onChangeText={
+            setConfirmPassword
+          }
           secureTextEntry
+          style={styles.input}
+          placeholderTextColor="#9CA3AF"
         />
 
-        {/* 4. Termos */}
+        {/* Termos */}
+
         <Pressable
-          onPress={() => setAcceptedTerms(!acceptedTerms)}
-          style={styles.termsBox}
+          style={
+            styles.termsBox
+          }
+          onPress={() =>
+            setAcceptedTerms(
+              !acceptedTerms
+            )
+          }
         >
-          <View style={[styles.checkbox, acceptedTerms && styles.checked]} />
-          <Text style={styles.termsText}>
-            Aceito os Termos e Condições e a Política de Privacidade
+          <View
+            style={[
+              styles.checkbox,
+              acceptedTerms &&
+                styles.checkboxActive,
+            ]}
+          />
+
+          <Text
+            style={
+              styles.termsText
+            }
+          >
+            Aceito os
+            Termos e
+            Condições e a
+            Política de
+            Privacidade
           </Text>
         </Pressable>
 
         <Button
-          title="Registar"
+          title={
+            loading
+              ? "A criar conta..."
+              : "Criar conta"
+          }
           variant="primary"
-          onPress={handleSubmit}
-          style={{ marginTop: 10 }}
+          onPress={
+            handleSubmit
+          }
+          style={{
+            marginTop: 20,
+            marginBottom: 40,
+          }}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff" },
-  container: { padding: 20 },
+  safe: {
+    flex: 1,
+    backgroundColor:
+      "#F9F9F9",
+  },
+
+  container: {
+    padding: 20,
+    paddingBottom: 50,
+  },
+
+  logo: {
+    fontSize: 42,
+    fontWeight: "900",
+    color: "#782726",
+    marginBottom: 6,
+    letterSpacing: 1,
+  },
 
   title: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 10,
+    fontSize: 26,
+    fontWeight: "700",
+    color: "#1C1C1C",
+    marginBottom: 16,
   },
 
   section: {
-    marginTop: 15,
-    marginBottom: 8,
-    fontWeight: "600",
-    fontSize: 14,
-    color: "#333",
+    marginTop: 20,
+    marginBottom: 10,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1C1C1C",
   },
 
   input: {
+    backgroundColor:
+      "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    fontSize: 14,
+    borderColor:
+      "#E5E7EB",
+    borderRadius: 14,
+    padding: 16,
+    fontSize: 15,
+    marginBottom: 12,
+
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 2,
   },
 
   dateBox: {
+    backgroundColor:
+      "#FFFFFF",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    justifyContent: "center",
+    borderColor:
+      "#E5E7EB",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
   },
 
   dateText: {
-    fontSize: 14,
-    color: "#333",
+    fontSize: 15,
+    color: "#1C1C1C",
   },
 
   termsBox: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 8,
   },
 
   checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: "#999",
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderColor:
+      "#782726",
+    borderRadius: 6,
     marginRight: 10,
-    borderRadius: 4,
+    backgroundColor:
+      "#fff",
   },
 
-  checked: {
-    backgroundColor: "#B22222",
-    borderColor: "#B22222",
+  checkboxActive: {
+    backgroundColor:
+      "#782726",
   },
 
   termsText: {
     flex: 1,
-    fontSize: 12,
-    color: "#444",
+    fontSize: 13,
+    color: "#4B5563",
+    lineHeight: 18,
   },
 });

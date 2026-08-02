@@ -58,7 +58,7 @@ export default function RegisterScreen() {
     //Alert.alert("Sucesso", "Conta criada");
     router.replace(
       role === "Cliente"
-        ? "./(client)"
+        ? "/(auth)/register-client"
         : role === "Restaurante"
           ? "/(auth)/register-restaurant"
           : "./(courier)",

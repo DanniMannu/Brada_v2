@@ -5,7 +5,7 @@ export default function Button({
   title,
   onPress,
   variant = "primary",
-  style,
+  style = {},
   disabled = false,
 }) {
   const v = variants[variant];
@@ -18,13 +18,23 @@ export default function Button({
         styles.button,
         {
           backgroundColor: v.backgroundColor,
-          borderColor: v.borderColor,
+          borderColor:
+            v.borderColor || "transparent",
           opacity: pressed ? 0.85 : 1,
         },
         style,
       ]}
     >
-      <Text style={[styles.text, { color: v.textColor }]}>{title}</Text>
+      <Text
+        style={[
+          styles.text,
+          {
+            color: v.textColor,
+          },
+        ]}
+      >
+        {title}
+      </Text>
     </Pressable>
   );
 }
@@ -38,6 +48,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
   },
+
   text: {
     fontWeight: "600",
     fontSize: 15,

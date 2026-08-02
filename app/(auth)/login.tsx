@@ -3,106 +3,194 @@ import Links from "@/components/ui/Links";
 import { useAuth } from "@/context/AuthContext";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, StyleSheet, Text, TextInput, View } from "react-native";
+
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
+  const { login, loading } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [focused, setFocused] = useState<string | null>(null);
 
-  const { login } = useAuth(); // ✅ usar AuthContext
+  const [focused, setFocused] = useState<
+    "email" | "password" | null
+  >(null);
 
-  // Animação do logo
-  const logoTranslateX = useSharedValue(-80);
-  const logoOpacity = useSharedValue(0);
+  const logoTranslateX =
+    useSharedValue(-80);
+
+  const logoOpacity =
+    useSharedValue(0);
 
   useEffect(() => {
-    logoTranslateX.value = withTiming(0, { duration: 900 });
-    logoOpacity.value = withTiming(1, { duration: 900 });
-  }, [logoTranslateX, logoOpacity]);
+    logoTranslateX.value =
+      withTiming(0, {
+        duration: 900,
+      });
 
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: logoOpacity.value,
-    transform: [{ translateX: logoTranslateX.value }],
-  }));
+    logoOpacity.value =
+      withTiming(1, {
+        duration: 900,
+      });
+  }, []);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Erro", "Preenche todos os campos");
-      return;
-    }
+  const logoStyle =
+    useAnimatedStyle(() => ({
+      opacity: logoOpacity.value,
+      transform: [
+        {
+          translateX:
+            logoTranslateX.value,
+        },
+      ],
+    }));
 
-    const roles = login(email, password); // ✅ mock auth
+  const handleLogin =
+    async () => {
+      if (
+        !email.trim() ||
+        !password.trim()
+      ) {
+        Alert.alert(
+          "Erro",
+          "Preenche todos os campos."
+        );
+        return;
+      }
 
-    if (!roles) {
-      Alert.alert("Erro", "Credenciais inválidas");
-      return;
-    }
+      const success =
+        await login(
+          email.trim(),
+          password
+        );
 
-    if (roles.length === 1) {
-      const role = roles[0];
+      if (!success) {
+        Alert.alert(
+          "Erro",
+          "Email ou password inválidos."
+        );
+        return;
+      }
 
-      if (role === "client") router.replace("./(client)");
-      if (role === "restaurant") router.replace("./(establishment)/index");
-      if (role === "courier") router.replace("./(courier)");
-    } else {
-      router.push("./select_role");
-    }
-  };
+      router.replace("/tabs/home");
+    };
 
-  return (
-    <SafeAreaView style={styles.safe}>
+  if (loading) {
+    return (
+      <SafeAreaView
+        style={styles.safe}
+      >
+        <View
+          style={
+            styles.loadingContainer
+          }
+        >
+          <Text
+            style={
+              styles.loadingText
+            }
+          >
+            A carregar...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (    <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Logo animado */}
-        <Animated.Text style={[styles.logo, logoStyle]}>Brada.</Animated.Text>
+        <Animated.Text
+          style={[styles.logo, logoStyle]}
+        >
+          Brada.
+        </Animated.Text>
 
-        {/* Card */}
         <View style={styles.card}>
-          <Text style={styles.title}>Bem-vindo</Text>
+          <Text style={styles.title}>
+            Bem-vindo
+          </Text>
 
           <TextInput
             placeholder="Email"
-            style={[styles.input, focused === "email" && styles.inputFocused]}
             value={email}
             onChangeText={setEmail}
-            onFocus={() => setFocused("email")}
-            onBlur={() => setFocused(null)}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            onFocus={() =>
+              setFocused("email")
+            }
+            onBlur={() =>
+              setFocused(null)
+            }
+            style={[
+              styles.input,
+              focused ===
+                "email" &&
+                styles.inputFocused,
+            ]}
           />
 
           <TextInput
             placeholder="Password"
-            secureTextEntry
-            style={[
-              styles.input,
-              focused === "password" && styles.inputFocused,
-            ]}
             value={password}
             onChangeText={setPassword}
-            onFocus={() => setFocused("password")}
-            onBlur={() => setFocused(null)}
+            secureTextEntry
+            onFocus={() =>
+              setFocused(
+                "password"
+              )
+            }
+            onBlur={() =>
+              setFocused(null)
+            }
+            style={[
+              styles.input,
+              focused ===
+                "password" &&
+                styles.inputFocused,
+            ]}
           />
 
           <Button
             title="Entrar"
             variant="primary"
             onPress={handleLogin}
-            style={{ marginTop: 10 }}
+            style={{
+              marginTop: 10,
+            }}
           />
 
           <Links
             title="Recuperar password"
-            onPress={() => router.push("./recover-password")}
+            onPress={() =>
+              Alert.alert(
+                "Brevemente",
+                "Esta funcionalidade será implementada."
+              )
+            }
           />
 
           <Links
             title="Não tens conta? Registar"
-            onPress={() => router.push("./register")}
+            onPress={() =>
+              router.push(
+                "/register-client"
+              )
+            }
           />
         </View>
       </View>
@@ -114,6 +202,18 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#F9F9F9",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#782726",
   },
 
   container: {
@@ -140,7 +240,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 26,
     borderRadius: 14,
     marginTop: 16,
-    justifyContent: "flex-start",
 
     shadowColor: "#000",
     shadowOpacity: 0.07,
@@ -161,18 +260,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     marginBottom: 12,
+    backgroundColor: "#FFFFFF",
   },
 
   inputFocused: {
     borderColor: "#782726",
-  },
-
-  link: {
-    marginTop: 25,
-    paddingBottom: 5,
-    textAlign: "center",
-    fontWeight: "600",
-    color: "#782726",
-    fontSize: 14,
+    borderWidth: 2,
   },
 });
